@@ -220,7 +220,9 @@ condition=False
 
 print()
 
-if np.shape(train_input)[0] != np.shape(train_output)[0]:
+if np.shape(hidden_nodes)[0] <1:
+    print("Error : Not enough hidden layer number.")
+elif np.shape(train_input)[0] != np.shape(train_output)[0]:
     print("Error : The sizes of input train dataset and output train dataset don't match. ")  
 elif np.shape(test_input)[0] != np.shape(test_output)[0]:
     print("Error : The sizes of input test dataset and output test dataset don't match. ")     
@@ -377,6 +379,7 @@ else:
     # Don't run the sesstion but print 'failed' if any condition is unmet
     print("Failed!")    
      
+
 
 
 
