@@ -10,10 +10,10 @@ import scipy.io
 ################################################# Customization part #################################################
 """
 Select the sparsity control mode
-'L' for layer wise sparsity control
-'N' for node wise sparsity control
+'layer' for layer wise sparsity control
+'node' for node wise sparsity control
 """
-mode = 'N'
+mode = 'node'
 
 
 """
@@ -41,14 +41,14 @@ beginAnneal=20
 lr_init = 1e-2    
 min_lr = 1e-4
 
-# Set learning rate of beta_L for weight sparsity control
+# Set learning rate of beta for weight sparsity control
 lr_beta = 1e-3
 # Set L2 parameter for L2 regularization
 L2_param= 1e-5
 
 
 """
-Set maximum beta_L value of each hidden layer (usually 0.01~0.2) 
+Set maximum beta value of each hidden layer (usually 0.01~0.2) 
 and set target sparsness value (0:dense~1:sparse)
 """
 max_beta = [0.01 ,0.15, 0.1]
@@ -224,7 +224,7 @@ if np.shape(train_input)[0] != np.shape(train_output)[0]:
     print("Error : The sizes of input train dataset and output train dataset don't match. ")  
 elif np.shape(test_input)[0] != np.shape(test_output)[0]:
     print("Error : The sizes of input test dataset and output test dataset don't match. ")     
-elif not ((mode=='L') | (mode=='N')):
+elif not ((mode=='layer') | (mode=='node')):
     print("Error : Select a valid mode. ") 
 elif (np.any(np.array(tg_hsp)<0)) | (np.any(np.array(tg_hsp)>1)):  
     print("Error : Please set the target sparsities appropriately.")
@@ -252,14 +252,14 @@ if condition==True:
     
             
         # initialization        
-        if mode=='L': 
+        if mode=='layer': 
             beta_L=np.zeros(np.shape(nodes)[0]-2)
             beta_vec_L = np.zeros(np.shape(nodes)[0]-2)
             hsp_L = np.zeros(np.shape(nodes)[0]-2)            
             plot_beta = np.zeros(np.shape(nodes)[0]-2)
             plot_hsp = np.zeros(np.shape(nodes)[0]-2)
                        
-        elif mode=='N':                       
+        elif mode=='node':                       
             beta_N = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]  
             beta_vec_N=np.zeros(np.sum(nodes[1:-1]))
             hsp_N = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]            
@@ -297,10 +297,10 @@ if condition==True:
                 batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
                 
                 # Get cost and optimize the model
-                if mode=='L':
+                if mode=='layer':
                     cost_batch,_=sess.run([cost_L,optimizer_L],\
                         feed_dict={Lr:lr, X:batch_x, Y:batch_y, Beta_vec_L:beta_vec_L })
-                elif mode=='N':
+                elif mode=='node':
                     cost_batch,_=sess.run([cost_N,optimizer_N],\
                         feed_dict={Lr:lr, X:batch_x, Y:batch_y, Beta_vec_N:beta_vec_N })
                 cost_epoch+=cost_batch/total_batch 
@@ -311,21 +311,21 @@ if condition==True:
                 plot_cost=np.hstack([plot_cost,[cost_batch]])
                 
                 # save footprint for plot
-                if mode=='L':
+                if mode=='layer':
                     plot_hsp=[np.vstack([plot_hsp[i],[hsp_L[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
                     plot_beta=[np.vstack([plot_beta[i],[beta_vec_L[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
-                elif mode=='N':
+                elif mode=='node':
                     plot_hsp=[np.vstack([plot_hsp[i],[np.transpose(hsp_N[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
                     plot_beta=[np.vstack([plot_beta[i],[np.transpose(beta_N[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
                 
         
                 # run weight sparsity control function
-                if mode=='L':
+                if mode=='layer':
                     for i in np.arange(np.shape(nodes)[0]-2):
                         [hsp_L[i],beta_L[i]]=Hoyers_layer_wise(w[i], beta_L[i], max_beta[i], tg_hsp[i])   
                     beta_vec_L=beta_L
                         
-                elif mode=='N':
+                elif mode=='node':
                     for i in np.arange(np.shape(nodes)[0]-2):
                         [hsp_N[i],beta_N[i]]=Hoyers_node_wise(w[i], beta_N[i], max_beta[i], tg_hsp[i])                        
                     beta_vec_N=[item for sublist in beta_N for item in sublist]
