@@ -23,10 +23,11 @@ dataset = scipy.io.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_samp
 
 
 """ 
-Set the number of nodes for each hidden layer here
+Set the number of nodes for input, output and each hidden layer here
 """
+input_nodes=74484
 hidden_nodes=[100,100,100]
-
+output_nodes=4
 
 """
 Set learning parameters
@@ -83,7 +84,7 @@ for i in np.arange(np.shape(dataset['test_y'])[0]):
 
 
 # Every layer's nodes
-nodes=[np.shape(train_input)[1]]+hidden_nodes+[np.shape(train_output)[1]]
+nodes=[input_nodes]+hidden_nodes+[output_nodes]
 
 # We need 'node_index' for split placeholder (hidden_nodes=[100, 100, 100] -> nodes_index=[0, 100, 200, 300])
 nodes_index= [int(np.sum(nodes[1:i+1])) for i in np.arange(np.shape(nodes)[0]-1)]
