@@ -220,7 +220,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              # Select optimizer 'Grad' for GradientDescentOptimizer, 'Adam' for AdamOptimizer, 'Rmsp' for RMSPropOptimizer
              optimizer_algorithm='Grad',
                        
-             # if you have three hidden layer, the number of target Hoyer's sparseness should be same 
+             #If you have three hidden layers, the number of target Hoyer's sparseness should be same 
              tg_hspset=[0.7, 0.5, 0.5], # Target sparsity
              max_beta=[0.05, 0.9, 0.9], # Maximum beta changes 
              beta_lrates = 1e-2,        L2_reg = 1e-5,  
