@@ -50,6 +50,7 @@ def RMSprop(cost, params, learning_rate, rho=0.9, epsilon=1e-6):
 # Adaptive Moment Estimation: another method that computes adaptive learning rates for each parameter. 
 # Kingma, D. P., & Ba, J. L. (2015). Adam: a Method for Stochastic Optimization. 
 # International Conference on Learning Representations, 1–13.
+# https://gist.github.com/skaae/ae7225263ca8806868cb
 
 def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8,
          gamma=1-1e-8):
