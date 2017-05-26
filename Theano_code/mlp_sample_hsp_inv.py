@@ -20,7 +20,6 @@ References:
 """
 __docformat__ = 'restructedtext en'
 
-
 import os
 import sys
 import timeit
@@ -55,6 +54,48 @@ def gradient_updates_momentum(cost, params, bnupdates, learning_rate, momentum):
 
 def relu1(x):
     return T.switch(x<0, 0, x)
+
+def RMSprop(cost, params, learning_rate, rho=0.9, epsilon=1e-6):
+    all_grads = [T.grad(cost, param) for param in params]
+
+    updates = []
+    for p, g in zip(params, all_grads):
+        acc = theano.shared(p.get_value() * 0.)
+        acc_new = rho * acc + (1 - rho) * g ** 2
+        gradient_scaling = T.sqrt(acc_new + epsilon)
+        g = g / gradient_scaling
+        updates.append((acc, acc_new))
+        updates.append((p, p - learning_rate * g))
+    return updates
+
+def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8,
+         gamma=1-1e-8):
+    
+    updates = []
+    all_grads = [T.grad(cost, param) for param in params]
+
+#     all_grads = T.grad(cost, params)
+    alpha = learning_rate
+    t = theano.shared(np.float32(1))
+    b1_t = b1*gamma**(t-1)   #(Decay the first moment running average coefficient)
+
+    for theta_previous, g in zip(params, all_grads):
+        m_previous = theano.shared(np.zeros(theta_previous.get_value().shape,
+                                            dtype=theano.config.floatX))
+        v_previous = theano.shared(np.zeros(theta_previous.get_value().shape,
+                                            dtype=theano.config.floatX))
+
+        m = b1_t*m_previous + (1 - b1_t)*g                             # (Update biased first moment estimate)
+        v = b2*v_previous + (1 - b2)*g**2                              # (Update biased second raw moment estimate)
+        m_hat = m / (1-b1**t)                                          # (Compute bias-corrected first moment estimate)
+        v_hat = v / (1-b2**t)                                          # (Compute bias-corrected second raw moment estimate)
+        theta = theta_previous - (alpha * m_hat) / (T.sqrt(v_hat) + e) #(Update parameters)
+
+        updates.append((m_previous, m))
+        updates.append((v_previous, v))
+        updates.append((theta_previous, theta) )
+    updates.append((t, t + 1.))
+    return updates
 
 # start-snippet-1
 class HiddenLayer(object):
@@ -170,21 +211,22 @@ class MLP(object):
         for i in xrange(len(n_nodes)-2):
             self.bnUpdates.extend(self.hiddenLayer[i].updates)
         
-def test_mlp(
-             # activation
-             # sigmoid function: T.-nnet.sigmoid,
-             # hyperbolic tangent function: T.tanh
-             # Rectified Linear Unit: relu1
-             n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
+def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              datasets='lhrhadvs_sample_data.mat',  # load data
+             # activation:  # sigmoid function: T.nnet.sigmoid, hyperbolic tangent function: T.tanh, Rectified Linear Unit: relu1
              batch_size = 100, n_epochs = 500, learning_rate=0.001,activation = T.tanh,
+             beginAnneal=200, min_annel_lrate = 1e-4, decay_rate = 1e-4, momentum_val=0.00,
+             
+             # Select optimizer 'Grad' for GradientDescentOptimizer, 'Adam' for AdamOptimizer, 'Rmsp' for RMSPropOptimizer
+             optimizer_algorithm='Grad',
+                       
              # if you have three hidden layer, the number of target Hoyer's sparseness should be same 
              tg_hspset=[0.7, 0.5, 0.5], # Target sparsity
              max_beta=[0.05, 0.9, 0.9], # Maximum beta changes 
              beta_lrates = 1e-2,        L2_reg = 1e-5,  
-             beginAnneal=200, min_annel_lrate = 1e-4, decay_rate = 1e-4,
-             momentum_val=0.00,
-             sav_path = '/home/khc/workspace/prni2017',
+          
+             # Save path  
+             sav_path = '/home/khc/workspace/prni2017',  
               ):
 
     cnt_hsp_val = np.zeros(len(n_nodes)-2);
@@ -263,14 +305,22 @@ def test_mlp(
             y: test_set_y[index * batch_size:(index + 1) * batch_size]
         }
     )
-    # start-snippet-5
-    gparams = [T.grad(cost, param) for param in classifier.params]
-        
+        # start-snippet-5
     updates =[];
-    for param, gparam, oldparam in zip(classifier.params, gparams, classifier.oldparams):
-        delta = ln_rate * gparam + momentum * oldparam
-        updates.append((param, param - delta))
-        updates.append((oldparam, delta))
+    # Select optimizer 'Grad' for GradientDescentOptimizer, 'Adam' for AdamOptimizer, 'Rmsp' for RMSPropOptimizer
+    if optimizer_algorithm=='Grad':
+        gparams = [T.grad(cost, param) for param in classifier.params]
+        
+        for param, gparam, oldparam in zip(classifier.params, gparams, classifier.oldparams):
+            delta = ln_rate * gparam + momentum * oldparam
+            updates.append((param, param - delta))
+            updates.append((oldparam, delta))
+
+    elif optimizer_algorithm=='Adam':
+        updates = adam(cost, classifier.params, learning_rate)
+        
+    elif optimizer_algorithm=='Rmsp' :
+        updates = RMSprop(cost, classifier.params, learning_rate)
     
     # compiling a Theano function `train_model` that returns the cost, but
     # in the same time updates the parameter of the model based on the rules
