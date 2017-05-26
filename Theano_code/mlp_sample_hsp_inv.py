@@ -18,16 +18,6 @@ from logistic_sgd import LogisticRegression # logistic regression function
 from hsp_fnc_inv_mat_cal import * # weight sparsity control 
 import StringIO # reads and writes a string buff
 
-# def sgradient_updates_with momentum
-def gradient_updates_momentum(cost, params, learning_rate, momentum):
-    updates = []
-
-    for param in params:
-        param_update = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
-        updates.append((param, param - learning_rate*param_update))
-        updates.append((param_update, momentum*param_update + (1. - momentum)*T.grad(cost, param)))
-        
-    return updates
 
 # RMSprop (Root Mean Square Propagation) is an optimizer that utilizes the magnitude of recent gradients to normalize the gradients
 # http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
@@ -81,12 +71,11 @@ def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8,
     updates.append((t, t + 1.))
     return updates
 
-# def gradient_updates_with momentum
+# def ReLu(Rectified Linear Unit) 
 def relu1(x):
     return T.switch(x<0, 0, x)
 
- # def classes for hidden layers and multiplelayer perceptron (MLP)
-
+# def classes for hidden layers and multiplelayer perceptron (MLP)
 # def class for hidden layers
 class HiddenLayer(object):
     def __init__(self, rng, input, n_in, n_out, W=None, b=None,
