@@ -47,11 +47,11 @@ nodes=[74484,100,100,100,4]
 Set learning parameters
 """
 # Set total epoch
-total_epoch=300
+total_epoch=600
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after 5th epoch
-beginAnneal=200
+beginAnneal=90
 # Set initial learning rate and minimum                     
 lr_init = 1e-3    
 min_lr = 1e-4
@@ -67,7 +67,7 @@ Set maximum beta value of each hidden layer (usually 0.01~0.2)
 and set target sparsness value (0:dense~1:sparse)
 """
 max_beta = [0.05, 0.8, 0.8]
-tg_hsp = [0.7, 0.6, 0.6]
+tg_hsp = [0.7, 0.65, 0.65]
 
 #max_beta = [0.02]
 #tg_hsp = [0.5]
@@ -116,22 +116,21 @@ w=[tf.Variable(w_init[i], dtype=tf.float32) for i in np.arange(np.shape(nodes)[0
 b=[tf.Variable(tf.random_normal([nodes[i+1]])) for i in np.arange(np.shape(nodes)[0]-1)]
 
 # Finally build our DNN model 
-layer=[0.0]*(np.shape(nodes)[0]-1)
-for i in np.arange(np.shape(nodes)[0]-1):
+hidden_layers=[0.0]*(np.shape(nodes)[0]-2)
+for i in np.arange(np.shape(nodes)[0]-2):
     
     # Input layer
     if i==0:
-        layer[i]=tf.add(tf.matmul(X,w[i]),b[i])
-        layer[i]=tf.nn.tanh(layer[i])
+        hidden_layers[i]=tf.add(tf.matmul(X,w[i]),b[i])
+        hidden_layers[i]=tf.nn.tanh(hidden_layers[i])
         
-    # Output layer 
-    elif i==np.shape(nodes)[0]-2:
-        layer[i]=tf.add(tf.matmul(layer[i-1],w[i]),b[i])
-    
     # The other layers    
     else:     
-        layer[i]=tf.add(tf.matmul(layer[i-1],w[i]),b[i])
-        layer[i]=tf.nn.tanh(layer[i])
+        hidden_layers[i]=tf.add(tf.matmul(hidden_layers[i-1],w[i]),b[i])
+        hidden_layers[i]=tf.nn.tanh(hidden_layers[i])
+
+output_layer=tf.add(tf.matmul(hidden_layers[-1],w[-1]),b[-1])
+logRegression_layer=tf.nn.tanh(output_layer)
 
 
                                  
@@ -166,9 +165,9 @@ def build_L1loss():
 # Define cost term with cross entropy and L1 and L2 tetm     
 def build_cost():
     if autoencoder:
-        cost=tf.reduce_mean(tf.pow(X - layer[-1], 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
+        cost=tf.reduce_mean(tf.pow(X - output_layer, 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
     else:
-        cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=layer[-1], labels=Y)) \
+        cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
                                          + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)                                         
     return cost
 
@@ -196,7 +195,9 @@ if mode=='layer':
         
         # Get value of weight
         W=sess.run(w_)
-        [dim,_]=W.shape    
+        [nodes,dim]=W.shape  
+        num_elements=nodes*dim
+ 
         Wvec=W.flatten()
         
         # Calculate L1 and L2 norm     
@@ -204,7 +205,7 @@ if mode=='layer':
         L2=LA.norm(Wvec,2)
         
         # Calculate hoyer's sparsness
-        h=(np.sqrt(dim)-(L1/L2))/(np.sqrt(dim)-1)
+        h=(np.sqrt(num_elements)-(L1/L2))/(np.sqrt(num_elements)-1)
         
         # Update beta
         b-=lr_beta*np.sign(h-tg)
@@ -212,8 +213,7 @@ if mode=='layer':
         # Trim value
         b=0.0 if b<0.0 else b
         b=max_b if b>max_b else b
-        
-                   
+                         
         return [h,b]
     
     
@@ -223,17 +223,17 @@ elif mode=='node':
     
         # Get value of weight
         W=sess.run(w_)
-        [dim,nodes]=W.shape
+        [nodes,dim]=W.shape
         
         # Calculate L1 and L2 norm 
         L1=LA.norm(W,1,axis=0)
         L2=LA.norm(W,2,axis=0)
         
-        h_vec = np.zeros((1,nodes))
-        tg_vec = np.ones(nodes)*tg
+        h_vec = np.zeros((1,dim))
+        tg_vec = np.ones(dim)*tg
         
         # Calculate hoyer's sparsness
-        h_vec=(np.sqrt(dim)-(L1/L2))/(np.sqrt(dim)-1)
+        h_vec=(np.sqrt(nodes)-(L1/L2))/(np.sqrt(nodes)-1)
         
         # Update beta
         b_vec-=lr_beta*np.sign(h_vec-tg_vec)
@@ -255,7 +255,7 @@ lr = lr_init
 Beta_vec = build_betavec()
 
 L1_loss = build_L1loss()
-L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]   
+L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
 
 cost = build_cost()
 
@@ -266,8 +266,7 @@ optimizer=build_optimizer(Lr)
   
 
 if not autoencoder:
-    pred=layer[-1]
-    correct_prediction=tf.equal(tf.argmax(pred,1),tf.argmax(Y,1))  
+    correct_prediction=tf.equal(tf.argmax(output_layer,1),tf.argmax(Y,1))  
         
     # calculate mean accuracy depending on the frequency it predicts correctly
     accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
@@ -372,12 +371,12 @@ if condition==True:
                 else:                   
                     cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
                     
-                cost_epoch+=cost_batch/total_batch 
-                    
+                cost_epoch+=cost_batch/total_batch      
         
                 # make space to plot beta, sparsity level
                 plot_lr=np.hstack([plot_lr,[lr]])
                 plot_cost=np.hstack([plot_cost,[cost_batch]])
+
                 
                 # save footprint for plot
                 if mode=='layer':
@@ -436,7 +435,7 @@ if condition==True:
     print("")       
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                      < Hidden layer",i+1)
+        print("                  < Hidden layer",i+1,">")
         plt.title("Beta plot",fontsize=16)
         plot_beta[i]=plot_beta[i][1:]
         plt.plot(plot_beta[i])
@@ -447,7 +446,7 @@ if condition==True:
     print("")            
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                      < Hidden layer",i+1)
+        print("                  < Hidden layer",i+1,">")
         plt.title("Hoyer's sparsness plot",fontsize=16)
         plot_hsp[i]=plot_hsp[i][1:]
         plt.plot(plot_hsp[i])
@@ -469,5 +468,11 @@ if condition==True:
 else:
     None 
   
-     
+    
+    
+    
+#             if i<(np.shape(nodes)[0]-2):
+#            print("                  < Hidden layer",i+1,">")
+#        else:
+#            print("                  < Output layer >")
 
