@@ -186,8 +186,6 @@ def build_optimizer(Lr):
 
 
 
-
-
 if mode=='layer':
     # Weight sparsity control with Hoyer's sparsness (Layer wise)  
     def Hoyers_sparsity_control(w_,b,max_b,tg):
@@ -244,6 +242,10 @@ elif mode=='node':
         return [h_vec,b_vec]
     
 
+
+
+
+
 lr = lr_init
 
 Beta_vec=betavec_build()
@@ -259,15 +261,12 @@ Lr=tf.placeholder(tf.float32)
 optimizer=build_optimizer(Lr)
   
 
-if autoencoder:
-    pred=tf.nn.sigmoid(layer[-1])
-    correct_prediction = tf.equal(pred,X)   
-else:
+if not autoencoder:
     pred=layer[-1]
     correct_prediction=tf.equal(tf.argmax(pred,1),tf.argmax(Y,1))  
-    
-# calculate mean accuracy depending on the frequency it predicts correctly
-accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
+        
+    # calculate mean accuracy depending on the frequency it predicts correctly
+    accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
 
 
 
@@ -403,65 +402,68 @@ if condition==True:
 
 
         # Print final accuracy of test set
-        if autoencoder:
-            # Applying encode and decode over test set
-            print("Accuracy :",sess.run(accuracy,feed_dict={X:test_input}))
-                        
-        else:
+        if not autoencoder:
             print("Accuracy :",sess.run(accuracy,feed_dict={X:test_input, Y:test_output}))
-        
-       
-        # Plot the change of learning rate
-        plt.title("Learning rate plot",fontsize=16)
-        plot_lr=plot_lr[1:]
-        plt.ylim(0.0, lr_init*1.2)
-        plt.plot(plot_lr)
-        plt.show()
-        
-        # Plot the change of cost
-        plt.title("Cost plot",fontsize=16)
-        plot_cost=plot_cost[1:]
-        plt.plot(plot_cost)
-        plt.show()      
-        
-        
-        # Plot the change of beta value
-        print("")       
-        for i in np.arange(np.shape(nodes)[0]-2):
-            print("")
-            print("                      < ",i+1,"th, layer >")
-            plt.title("Beta plot",fontsize=16)
-            plot_beta[i]=plot_beta[i][1:]
-            plt.plot(plot_beta[i])
-            plt.ylim(0.0, 0.15)
-            plt.show()
-        
-        # Plot the change of Hoyer's sparsness
-        print("")            
-        for i in np.arange(np.shape(nodes)[0]-2):
-            print("")
-            print("                      < ",i+1,"th, layer >")
-            plt.title("Hoyer's sparsness plot",fontsize=16)
-            plot_hsp[i]=plot_hsp[i][1:]
-            plt.plot(plot_hsp[i])
-            plt.ylim(0.0, 1.0)
-            plt.show()
-        
-        # make a new 'results' directory in the current directory
-        current_directory = os.getcwd()
-        final_directory = os.path.join(current_directory, r'results')
-        if not os.path.exists(final_directory):
-            os.makedirs(final_directory) 
             
-        # save results as .mat file
-        scipy.io.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
-        scipy.io.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
-        scipy.io.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
-        scipy.io.savemat("results/result_hsp.mat", mdict={'hsp': plot_hsp})
-
-
 else:
     # Don't run the sesstion but print 'failed' if any condition is unmet
-    print("Failed!")    
+    print("Failed!")  
+     
+    
+    
+################################################ Plot & save results part ################################################
+if condition==True:
+       
+    # Plot the change of learning rate
+    plt.title("Learning rate plot",fontsize=16)
+    plot_lr=plot_lr[1:]
+    plt.ylim(0.0, lr_init*1.2)
+    plt.plot(plot_lr)
+    plt.show()
+    
+    # Plot the change of cost
+    plt.title("Cost plot",fontsize=16)
+    plot_cost=plot_cost[1:]
+    plt.plot(plot_cost)
+    plt.show()      
+    
+    
+    # Plot the change of beta value
+    print("")       
+    for i in np.arange(np.shape(nodes)[0]-2):
+        print("")
+        print("                      < ",i+1,"th, layer >")
+        plt.title("Beta plot",fontsize=16)
+        plot_beta[i]=plot_beta[i][1:]
+        plt.plot(plot_beta[i])
+        plt.ylim(0.0, 0.15)
+        plt.show()
+    
+    # Plot the change of Hoyer's sparsness
+    print("")            
+    for i in np.arange(np.shape(nodes)[0]-2):
+        print("")
+        print("                      < ",i+1,"th, layer >")
+        plt.title("Hoyer's sparsness plot",fontsize=16)
+        plot_hsp[i]=plot_hsp[i][1:]
+        plt.plot(plot_hsp[i])
+        plt.ylim(0.0, 1.0)
+        plt.show()
+    
+    # make a new 'results' directory in the current directory
+    current_directory = os.getcwd()
+    final_directory = os.path.join(current_directory, r'results')
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory) 
+        
+    # save results as .mat file
+    scipy.io.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
+    scipy.io.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
+    scipy.io.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
+    scipy.io.savemat("results/result_hsp.mat", mdict={'hsp': plot_hsp})
+
+else:
+    None 
+  
      
 
