@@ -159,17 +159,14 @@ def build_L1loss():
 
        
 
-# Define cost term with cross entropy and L1 and L2 tetm 
-if autoencoder:
-    def build_cost():
+# Define cost term with cross entropy and L1 and L2 tetm     
+def build_cost():
+    if autoencoder:
         cost=tf.reduce_mean(tf.pow(X - layer[-1], 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
-        return cost    
-    
-else:
-    def build_cost():
+    else:
         cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=layer[-1], labels=Y)) \
-                                         + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
-        return cost    
+                                         + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)                                         
+    return cost
 
 
 # Define optimizer
@@ -190,8 +187,9 @@ def build_optimizer(Lr):
 
 
 
-# Weight sparsity control with Hoyer's sparsness (Layer wise)  
+
 if mode=='layer':
+    # Weight sparsity control with Hoyer's sparsness (Layer wise)  
     def Hoyers_sparsity_control(w_,b,max_b,tg):
         
         # Get value of weight
@@ -216,9 +214,9 @@ if mode=='layer':
                    
         return [h,b]
     
-
-# Weight sparsity control with Hoyer's sparsness (Node wise)    
+    
 elif mode=='node':   
+    # Weight sparsity control with Hoyer's sparsness (Node wise)
     def Hoyers_sparsity_control(w_,b_vec,max_b,tg):
     
         # Get value of weight
@@ -318,7 +316,7 @@ if condition==True:
         sess.run(init)
     
         # initialization    
-        def initialization(mode):           
+        def initialization():           
             if mode=='layer': 
                 beta=np.zeros(np.shape(nodes)[0]-2)
                 beta_vec = np.zeros(np.shape(nodes)[0]-2)
@@ -339,17 +337,15 @@ if condition==True:
             
             return beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost
                 
-        beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost = initialization(mode)
+        beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost = initialization()
         
-        
-        
+               
 
         
            
         # Calculate how many mini-batch iterations
         total_batch=int(np.shape(train_output)[0]/batch_size) 
-        
-        
+               
         # train and get cost
         cost_avg=0.0
         for epoch in np.arange(total_epoch):            
@@ -368,7 +364,6 @@ if condition==True:
                 batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
                 
                 # Get cost and optimize the model
-                # auto encoder
                 if autoencoder:
                     cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Beta_vec:beta_vec })
                 else:                   
@@ -397,18 +392,16 @@ if condition==True:
                     [hsp[i],beta[i]]=Hoyers_sparsity_control(w[i], beta[i], max_beta[i], tg_hsp[i])   
                     
                 if mode=='layer':               
-                    beta_vec=beta
-                        
+                    beta_vec=beta                      
                 elif mode=='node':                              
                     beta_vec=[item for sublist in beta for item in sublist]
                     
                     
             # Print cost at each epoch        
             print("< Epoch", "{:02d}".format(epoch+1),"> Cost : ", "{:.4f}".format(cost_epoch))
-    #        print("beta_(mean) :",beta_N)
-    #        print("hsp_h1_vec(mean) : ","{:.3f}".format(hsp_h1_vec.mean()), "/ hsp_h2_vec(mean) :","{:.3f}".format(hsp_h2_vec.mean()), "/ hsp_h3_vec(mean) :","{:.3f}".format(hsp_h3_vec.mean()))
-    #        print("")
-        
+
+
+
         # Print final accuracy of test set
         if autoencoder:
             # Applying encode and decode over test set
@@ -454,10 +447,13 @@ if condition==True:
             plt.ylim(0.0, 1.0)
             plt.show()
         
+        # make a new 'results' directory in the current directory
         current_directory = os.getcwd()
         final_directory = os.path.join(current_directory, r'results')
         if not os.path.exists(final_directory):
-            os.makedirs(final_directory)  
+            os.makedirs(final_directory) 
+            
+        # save results as .mat file
         scipy.io.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
         scipy.io.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
         scipy.io.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
