@@ -20,15 +20,16 @@ Select the sparsity control mode
 """
 mode = 'node'
 
+
 """
 Select optimizer
-'G' for GradientDescentOptimizer
+'Grad' for GradientDescentOptimizer
 'Ada' for AdagradOptimizer
-'M' for MomentumOptimizer
+'Moment' for MomentumOptimizer
 'Adam' for AdamOptimizer
-'R' for RMSPropOptimizer
+'RMSP' for RMSPropOptimizer
 """
-optimizer_algorithm='Ada'
+optimizer_algorithm='Grad'
 
 """
 Load your own data here
@@ -40,22 +41,23 @@ dataset = scipy.io.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_samp
 Set the number of nodes for input, output and each hidden layer here
 """
 nodes=[74484,100,100,100,4]
+#nodes=[74484,500,74484]
 
 """
 Set learning parameters
 """
 # Set total epoch
-total_epoch=30
+total_epoch=300
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after 5th epoch
-beginAnneal=20  
+beginAnneal=200
 # Set initial learning rate and minimum                     
-lr_init = 1e-2    
+lr_init = 1e-3    
 min_lr = 1e-4
 
 # Set learning rate of beta for weight sparsity control
-lr_beta = 1e-3
+lr_beta = 1e-2
 # Set L2 parameter for L2 regularization
 L2_param= 1e-5
 
@@ -64,9 +66,11 @@ L2_param= 1e-5
 Set maximum beta value of each hidden layer (usually 0.01~0.2) 
 and set target sparsness value (0:dense~1:sparse)
 """
-max_beta = [0.01,0.02,0.02]
-tg_hsp = [0.5,0.5,0.5]
+max_beta = [0.05, 0.8, 0.8]
+tg_hsp = [0.7, 0.6, 0.6]
 
+#max_beta = [0.02]
+#tg_hsp = [0.5]
 
 ################################################# Input data part #################################################
 
@@ -118,7 +122,7 @@ for i in np.arange(np.shape(nodes)[0]-1):
     # Input layer
     if i==0:
         layer[i]=tf.add(tf.matmul(X,w[i]),b[i])
-        layer[i]=tf.nn.sigmoid(layer[i])
+        layer[i]=tf.nn.tanh(layer[i])
         
     # Output layer 
     elif i==np.shape(nodes)[0]-2:
@@ -127,7 +131,7 @@ for i in np.arange(np.shape(nodes)[0]-1):
     # The other layers    
     else:     
         layer[i]=tf.add(tf.matmul(layer[i-1],w[i]),b[i])
-        layer[i]=tf.nn.sigmoid(layer[i])
+        layer[i]=tf.nn.tanh(layer[i])
 
 
                                  
@@ -139,7 +143,7 @@ for i in np.arange(np.shape(nodes)[0]-1):
 
 
 # Make placeholders for total beta vectors (make a long one to concatenate every beta vector) 
-def betavec_build():
+def build_betavec():
     if mode=='layer':
         Beta_vec=tf.placeholder(tf.float32,[np.shape(nodes)[0]-2])
     elif mode=='node':
@@ -171,15 +175,15 @@ def build_cost():
 
 # Define optimizer
 def build_optimizer(Lr):
-    if optimizer_algorithm=='G':
+    if optimizer_algorithm=='Grad':
         optimizer=tf.train.GradientDescentOptimizer(Lr).minimize(cost) 
     elif optimizer_algorithm=='Ada':
         optimizer=tf.train.AdagradOptimizer(Lr).minimize(cost) 
     elif optimizer_algorithm=='Adam':
         optimizer=tf.train.AdamOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='M':
+    elif optimizer_algorithm=='Moment':
         optimizer=tf.train.MomentumOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='R':
+    elif optimizer_algorithm=='RMSP':
         optimizer=tf.train.RMSPropOptimizer(Lr).minimize(cost) 
 
     return optimizer
@@ -248,12 +252,12 @@ elif mode=='node':
 
 lr = lr_init
 
-Beta_vec=betavec_build()
+Beta_vec = build_betavec()
 
-L1_loss=build_L1loss()
+L1_loss = build_L1loss()
 L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]   
 
-cost=build_cost()
+cost = build_cost()
 
 
 # Make learning rate as placeholder to update learning rate every iterarion 
@@ -432,18 +436,18 @@ if condition==True:
     print("")       
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                      < ",i+1,"th, layer >")
+        print("                      < Hidden layer",i+1)
         plt.title("Beta plot",fontsize=16)
         plot_beta[i]=plot_beta[i][1:]
         plt.plot(plot_beta[i])
-        plt.ylim(0.0, 0.15)
+        plt.ylim(0.0, np.max(max_beta)*1.2)
         plt.show()
     
     # Plot the change of Hoyer's sparsness
     print("")            
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                      < ",i+1,"th, layer >")
+        print("                      < Hidden layer",i+1)
         plt.title("Hoyer's sparsness plot",fontsize=16)
         plot_hsp[i]=plot_hsp[i][1:]
         plt.plot(plot_hsp[i])
