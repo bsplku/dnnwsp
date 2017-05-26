@@ -211,7 +211,7 @@ class MLP(object):
         for i in xrange(len(n_nodes)-2):
             self.bnUpdates.extend(self.hiddenLayer[i].updates)
         
-def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
+def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
              datasets='lhrhadvs_sample_data.mat',  # load data
              # activation:  # sigmoid function: T.nnet.sigmoid, hyperbolic tangent function: T.tanh, Rectified Linear Unit: relu1
              batch_size = 100, n_epochs = 500, learning_rate=0.001,activation = T.tanh,
