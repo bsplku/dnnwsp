@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 from numpy import linalg as LA
 import scipy.io
+import os.path
 
 ################################################# Customization part #################################################
 """
@@ -452,11 +453,15 @@ if condition==True:
             plt.plot(plot_hsp[i])
             plt.ylim(0.0, 1.0)
             plt.show()
-            
-        scipy.io.savemat('result_learningrate.mat', mdict={'lr': plot_lr})
-        scipy.io.savemat('result_cost.mat', mdict={'cost': plot_cost})
-        scipy.io.savemat('result_beta.mat', mdict={'beta': plot_beta})
-        scipy.io.savemat('result_hsp.mat', mdict={'hsp': plot_hsp})
+        
+        current_directory = os.getcwd()
+        final_directory = os.path.join(current_directory, r'results')
+        if not os.path.exists(final_directory):
+            os.makedirs(final_directory)  
+        scipy.io.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
+        scipy.io.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
+        scipy.io.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
+        scipy.io.savemat("results/result_hsp.mat", mdict={'hsp': plot_hsp})
 
 
 else:
