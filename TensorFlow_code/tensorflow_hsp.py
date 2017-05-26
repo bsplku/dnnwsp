@@ -6,19 +6,18 @@ import numpy as np
 from numpy import linalg as LA
 import scipy.io
 
-examples_to_show=5
 ################################################# Customization part #################################################
 """
 autoencoder or not
 """
-autoencoder=True
+autoencoder=False
 
 """
 Select the sparsity control mode
 'layer' for layer wise sparsity control
 'node' for node wise sparsity control
 """
-mode = 'layer'
+mode = 'node'
 
 """
 Select optimizer
@@ -39,17 +38,17 @@ dataset = scipy.io.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_samp
 """ 
 Set the number of nodes for input, output and each hidden layer here
 """
-nodes=[74484,100,74484]
+nodes=[74484,100,100,100,4]
 
 """
 Set learning parameters
 """
 # Set total epoch
-total_epoch=20
+total_epoch=30
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after 5th epoch
-beginAnneal=10  
+beginAnneal=20  
 # Set initial learning rate and minimum                     
 lr_init = 1e-2    
 min_lr = 1e-4
@@ -64,8 +63,8 @@ L2_param= 1e-5
 Set maximum beta value of each hidden layer (usually 0.01~0.2) 
 and set target sparsness value (0:dense~1:sparse)
 """
-max_beta = [0.01]
-tg_hsp = [0.2]
+max_beta = [0.01,0.02,0.02]
+tg_hsp = [0.5,0.5,0.5]
 
 
 ################################################# Input data part #################################################
@@ -77,7 +76,7 @@ test_input = dataset['test_x']
 
 
 
-if not(autoencoder):  
+if autoencoder==False:  
     # Split the dataset into traning output 
     train_output = np.zeros((np.shape(dataset['train_y'])[0],np.max(dataset['train_y'])+1))
     # trainsform classes into One-hot
@@ -118,7 +117,7 @@ for i in np.arange(np.shape(nodes)[0]-1):
     # Input layer
     if i==0:
         layer[i]=tf.add(tf.matmul(X,w[i]),b[i])
-        layer[i]=tf.nn.relu(layer[i])
+        layer[i]=tf.nn.sigmoid(layer[i])
         
     # Output layer 
     elif i==np.shape(nodes)[0]-2:
@@ -127,20 +126,19 @@ for i in np.arange(np.shape(nodes)[0]-1):
     # The other layers    
     else:     
         layer[i]=tf.add(tf.matmul(layer[i-1],w[i]),b[i])
-        layer[i]=tf.nn.relu(layer[i])
-                                 
-# Define hypothesis to predict and get accuracy                                 
-hypothesis=tf.nn.softmax(layer[-1])
+        layer[i]=tf.nn.sigmoid(layer[i])
 
+
+                                 
 
 
 
 ############################################# Learning part #############################################
 
-lr = lr_init
+
 
 # Make placeholders for total beta vectors (make a long one to concatenate every beta vector) 
-def betavec_build(mode):
+def betavec_build():
     if mode=='layer':
         Beta_vec=tf.placeholder(tf.float32,[np.shape(nodes)[0]-2])
     elif mode=='node':
@@ -148,10 +146,9 @@ def betavec_build(mode):
 
     return Beta_vec
 
-Beta_vec=betavec_build(mode)
 
 # Make L1 loss term and L2 loss term for regularisation
-def build_L1loss(mode):
+def build_L1loss():
     if mode=='layer':
         L1_loss=[Beta_vec[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
     elif mode=='node':
@@ -159,45 +156,36 @@ def build_L1loss(mode):
 
     return L1_loss
 
-L1_loss=build_L1loss(mode)
-L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]          
-
-
+       
 
 # Define cost term with cross entropy and L1 and L2 tetm 
 if autoencoder:
-    def build_cost(mode):
+    def build_cost():
         cost=tf.reduce_mean(tf.pow(X - layer[-1], 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
         return cost    
     
 else:
-    def build_cost(mode):
+    def build_cost():
         cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=layer[-1], labels=Y)) \
                                          + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
         return cost    
 
-cost=build_cost(mode)
 
-
-# Make learning rate as placeholder to update learning rate every iterarion 
-Lr=tf.placeholder(tf.float32)
 # Define optimizer
-def build_optimizer(opt):
-    if opt=='G':
+def build_optimizer(Lr):
+    if optimizer_algorithm=='G':
         optimizer=tf.train.GradientDescentOptimizer(Lr).minimize(cost) 
-    elif opt=='Ada':
+    elif optimizer_algorithm=='Ada':
         optimizer=tf.train.AdagradOptimizer(Lr).minimize(cost) 
-    elif opt=='Adam':
+    elif optimizer_algorithm=='Adam':
         optimizer=tf.train.AdamOptimizer(Lr).minimize(cost) 
-    elif opt=='M':
+    elif optimizer_algorithm=='M':
         optimizer=tf.train.MomentumOptimizer(Lr).minimize(cost) 
-    elif opt=='R':
+    elif optimizer_algorithm=='R':
         optimizer=tf.train.RMSPropOptimizer(Lr).minimize(cost) 
 
     return optimizer
 
-
-optimizer=build_optimizer(optimizer_algorithm)
 
 
 
@@ -257,13 +245,30 @@ elif mode=='node':
         return [h_vec,b_vec]
     
 
+lr = lr_init
+
+Beta_vec=betavec_build()
+
+L1_loss=build_L1loss()
+L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]   
+
+cost=build_cost()
+
+
+# Make learning rate as placeholder to update learning rate every iterarion 
+Lr=tf.placeholder(tf.float32)
+optimizer=build_optimizer(Lr)
   
 
-if ~autoencoder:
-    # How many times it predicts correctly
-    correct_prediction=tf.equal(tf.argmax(hypothesis,1),tf.argmax(Y,1))  
-    # calculate mean accuracy depending on the frequency it predicts correctly
-    accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
+if autoencoder:
+    pred=tf.nn.sigmoid(layer[-1])
+    correct_prediction = tf.equal(pred,X)   
+else:
+    pred=layer[-1]
+    correct_prediction=tf.equal(tf.argmax(pred,1),tf.argmax(Y,1))  
+    
+# calculate mean accuracy depending on the frequency it predicts correctly
+accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
 
 
 
@@ -288,6 +293,8 @@ elif not ((mode=='layer') | (mode=='node')):
     print("Error : Select a valid mode. ") 
 elif (np.any(np.array(tg_hsp)<0)) | (np.any(np.array(tg_hsp)>1)):  
     print("Error : Please set the target sparsities appropriately.")
+elif autoencoder!=True & autoencoder!=False:
+    print("Error : Please set the autoencoder mode appropriately.")
 else:
     condition=True
 
@@ -363,7 +370,6 @@ if condition==True:
                 # auto encoder
                 if autoencoder:
                     cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Beta_vec:beta_vec })
-
                 else:                   
                     cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
                     
@@ -405,10 +411,7 @@ if condition==True:
         # Print final accuracy of test set
         if autoencoder:
             # Applying encode and decode over test set
-            encode_decode = sess.run(layer[-1],feed_dict={X:test_input})
-            correct_prediction = np.equal(test_input,encode_decode) 
-            correct_prediction = 1*correct_prediction
-            print("Accuracy :",np.mean(correct_prediction))
+            print("Accuracy :",sess.run(accuracy,feed_dict={X:test_input}))
                         
         else:
             print("Accuracy :",sess.run(accuracy,feed_dict={X:test_input, Y:test_output}))
@@ -453,7 +456,7 @@ if condition==True:
         scipy.io.savemat('result_learningrate.mat', mdict={'lr': plot_lr})
         scipy.io.savemat('result_cost.mat', mdict={'cost': plot_cost})
         scipy.io.savemat('result_beta.mat', mdict={'beta': plot_beta})
-        scipy.io.savemat('result_hsp.mat', mdict={'beta': plot_hsp})
+        scipy.io.savemat('result_hsp.mat', mdict={'hsp': plot_hsp})
 
 
 else:
