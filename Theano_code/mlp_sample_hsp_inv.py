@@ -1,23 +1,6 @@
-"""
-This tutorial introduces the multilayer perceptron using Theano.
+# RNI2017 tutorial
+# This tutorial introduces the multilayer perceptron with an explicit control of weight sparsity level.
 
- A multilayer perceptron is a logistic regressor where
-instead of feeding the input to the logistic regression you insert a
-intermediate layer, called the hidden layer, that has a nonlinear
-activation function (usually tanh or sigmoid) . One can use many such
-hidden layers making the architecture deep. The tutorial will also tackle
-the problem of MNIST digit classification.
-
-.. math::
-
-    f(x) = G( b^{(2)} + W^{(2)}( s( b^{(1)} + W^{(1)} x))),
-
-References:
-
-    - textbooks: "Pattern Recognition and Machine Learning" -
-                 Christopher M. Bishop, section 5
-
-"""
 __docformat__ = 'restructedtext en'
 
 import os
@@ -29,36 +12,32 @@ import numpy as np
 import scipy.io as sio
 
 import theano
-import theano.tensor as T
+import theano.tensor as T 
 
-from logistic_sgd import LogisticRegression
-from hsp_fnc_inv_mat_cal import * 
-import StringIO 
+from logistic_sgd import LogisticRegression # logistic regression function
+from hsp_fnc_inv_mat_cal import * # weight sparsity control 
+import StringIO # reads and writes a string buff
 
-# def gradient_updates_momentum(cost, params, learning_rate, momentum):
-def gradient_updates_momentum(cost, params, bnupdates, learning_rate, momentum):
+# def sgradient_updates_with momentum
+def gradient_updates_momentum(cost, params, learning_rate, momentum):
     updates = []
-    
-    for bnupdate in bnupdates:
-        
-        updates.append(bnupdate)
 
     for param in params:
-
         param_update = theano.shared(param.get_value()*0., broadcastable=param.broadcastable)
         updates.append((param, param - learning_rate*param_update))
         updates.append((param_update, momentum*param_update + (1. - momentum)*T.grad(cost, param)))
-       
-       
+        
     return updates
 
-def relu1(x):
-    return T.switch(x<0, 0, x)
+# RMSprop (Root Mean Square Propagation) is an optimizer that utilizes the magnitude of recent gradients to normalize the gradients
+# http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
 
 def RMSprop(cost, params, learning_rate, rho=0.9, epsilon=1e-6):
+    
+    updates = []
+    
     all_grads = [T.grad(cost, param) for param in params]
 
-    updates = []
     for p, g in zip(params, all_grads):
         acc = theano.shared(p.get_value() * 0.)
         acc_new = rho * acc + (1 - rho) * g ** 2
@@ -68,13 +47,17 @@ def RMSprop(cost, params, learning_rate, rho=0.9, epsilon=1e-6):
         updates.append((p, p - learning_rate * g))
     return updates
 
+# Adaptive Moment Estimation: another method that computes adaptive learning rates for each parameter. 
+# Kingma, D. P., & Ba, J. L. (2015). Adam: a Method for Stochastic Optimization. 
+# International Conference on Learning Representations, 1–13.
+
 def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8,
          gamma=1-1e-8):
     
     updates = []
+    
     all_grads = [T.grad(cost, param) for param in params]
-
-#     all_grads = T.grad(cost, params)
+    
     alpha = learning_rate
     t = theano.shared(np.float32(1))
     b1_t = b1*gamma**(t-1)   #(Decay the first moment running average coefficient)
@@ -97,13 +80,18 @@ def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8,
     updates.append((t, t + 1.))
     return updates
 
-# start-snippet-1
+# def gradient_updates_with momentum
+def relu1(x):
+    return T.switch(x<0, 0, x)
+
+ # def classes for hidden layers and multiplelayer perceptron (MLP)
+
+# def class for hidden layers
 class HiddenLayer(object):
     def __init__(self, rng, input, n_in, n_out, W=None, b=None,
                  activation=T.nnet.sigmoid):
-
+        
         self.input = input
-        # end-snippet-1
 
         if W is None:
             W_values = numpy.asarray(
@@ -114,8 +102,8 @@ class HiddenLayer(object):
                 ),
                 dtype=theano.config.floatX
             )
-#             if activation == theano.tensor.nnet.sigmoid:
-#                 W_values *= 4
+            if activation == theano.tensor.nnet.sigmoid:
+                 W_values *= 4
             W = theano.shared(value=W_values, name='W', borrow=True)
             
         if b is None:
@@ -132,14 +120,12 @@ class HiddenLayer(object):
         )
         # parameters of the model
         self.params = [self.W, self.b]
-        
-        self.chk_pre_output = theano.shared(numpy.zeros((60,n_out), dtype=theano.config.floatX), name='chk_pre_output', borrow=True)
         self.updates = [(self.chk_pre_output, lin_output)]
 
-# start-snippet-2
+# def class for MLP including hidden layer class
 class MLP(object):
     
-    def __init__(self, rng, input, n_nodes, pretrained=None, activation=T.nnet.sigmoid):
+    def __init__(self, rng, input, n_nodes, activation=T.nnet.sigmoid):
 
         if len(n_nodes) > 2:
             self.hiddenLayer = []
@@ -174,7 +160,8 @@ class MLP(object):
             n_in=n_nodes[len(n_nodes)-2],
             n_out=n_nodes[len(n_nodes)-1]
         )
-        # end-snippet-2 start-snippet-3
+        
+        # def L1 and L2 regularization terms 
         
         self.L1 = []
         for i in xrange(len(n_nodes)-2):
@@ -189,9 +176,11 @@ class MLP(object):
         # negative log likelihood of the MLP is given by the negative
         # log likelihood of the output of the model, computed in the
         # logistic regression layer
+        
         self.negative_log_likelihood = (
             self.logRegressionLayer.negative_log_likelihood
         )
+        
         # same holds for the function computing the number of errors
         self.errors = self.logRegressionLayer.errors
         self.mse = self.logRegressionLayer.mse
@@ -207,11 +196,8 @@ class MLP(object):
         # keep track of model input
         self.input = input
         
-        self.bnUpdates = []
-        for i in xrange(len(n_nodes)-2):
-            self.bnUpdates.extend(self.hiddenLayer[i].updates)
         
-def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
+            def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
              datasets='lhrhadvs_sample_data.mat',  # load data
              # activation:  # sigmoid function: T.nnet.sigmoid, hyperbolic tangent function: T.tanh, Rectified Linear Unit: relu1
              batch_size = 100, n_epochs = 500, learning_rate=0.001,activation = T.tanh,
@@ -221,7 +207,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
              optimizer_algorithm='Grad',
                        
              #If you have three hidden layers, the number of target Hoyer's sparseness should be same 
-             tg_hspset=[0.7, 0.5, 0.5], # Target sparsity
+             tg_hspset=[0.7, 0.5, 0.5], # Target Hoyer sparseness (HSP) levels
              max_beta=[0.05, 0.9, 0.9], # Maximum beta changes 
              beta_lrates = 1e-2,        L2_reg = 1e-5,  
           
@@ -229,6 +215,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
              sav_path = '/home/khc/workspace/prni2017',  
               ):
 
+    # variables for HSP and beta changes 
     cnt_hsp_val = np.zeros(len(n_nodes)-2);
     cnt_beta_val = np.zeros(len(n_nodes)-2);
     
@@ -261,14 +248,14 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     #####################
     # BUILD ACTUAL MODEL #
     ######################
-    print '... building the model'
+    print('... building the model')
 
     # allocate symbolic variables for the data
     index = T.lscalar()  # index to a [mini]batch
     x = T.matrix('x')  
     y = T.ivector('y')  # the labels are presented as 1D vector of [int] labels
 
-    l1_penalty_layer = T.fvector() #  L1-norm regularization parameter
+    l1_penalty_layer = T.fvector(name='L1_penalty') #  L1-norm regularization parameter
     ln_rate = T.scalar(name='learning_rate') # learning rate
     momentum = T.scalar(name='momentum')
                  
@@ -280,16 +267,14 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
         input=x,
         n_nodes = n_nodes,
         activation = activation,
-        pretrained = None
     )
 
-    # start-snippet-4
+    # def cost function including L1 and L2 regularization
     cost = (classifier.negative_log_likelihood(y))
     for i in xrange(len(n_nodes)-2):
         node_size = n_nodes[i+1]; tg_index = np.arange((i * node_size),((i + 1) * node_size));
         cost += (T.dot(abs(classifier.hiddenLayer[i].W),l1_penalty_layer[tg_index])).sum(); 
     cost += L2_reg * classifier.L2_sqr    
-    # end-snippet-4
     
     updates_test = []
     for hiddenlayer in classifier.hiddenLayer:
@@ -305,7 +290,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
             y: test_set_y[index * batch_size:(index + 1) * batch_size]
         }
     )
-        # start-snippet-5
+    
     updates =[];
     # Select optimizer 'Grad' for GradientDescentOptimizer, 'Adam' for AdamOptimizer, 'Rmsp' for RMSPropOptimizer
     if optimizer_algorithm=='Grad':
@@ -336,20 +321,19 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
         allow_input_downcast = True,
         on_unused_input = 'ignore'
     )
-    # end-snippet-5sklearn
+
 
     ###############
     # TRAIN MODEL #
     ###############
-    print '... training'
+    print('... training')
 
-    # early-stopping parameters
     test_score = 0. 
     start_time = timeit.default_timer()
 
     epoch = 0;    done_looping = False
     
-    # To check training
+    # def variables
     train_errors = np.zeros(n_epochs);    test_errors = np.zeros(n_epochs);
     train_mse = np.zeros(n_epochs);    test_mse = np.zeros(n_epochs);
     lrs = np.zeros(n_epochs); lrate_list = np.zeros(n_epochs);
@@ -363,7 +347,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     
         all_hsp_vals.append(np.zeros((n_epochs,n_nodes[i+1])));
         all_L1_beta_vals.append(np.zeros((n_epochs,n_nodes[i+1])));
-     
+    
+    # training model and testing 
     while (epoch < n_epochs) and (not done_looping):
         epoch = epoch + 1
         minibatch_all_avg_error = []; minibatch_all_avg_mse = []
@@ -375,10 +360,11 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
             minibatch_all_avg_mse.append(minibatch_avg_mse)
              
             for i in xrange(len(n_nodes)-2):
+                # L1 variable selection depending on nodes/hidden layers 
                 node_size = n_nodes[i+1]; tg_index = np.arange((i * node_size),((i + 1) * node_size));
                 tmp_L1_beta_vals = L1_beta_vals[tg_index]
-#                 print tmp_L1_beta_vals.size
                 
+                # Check current HSP level and change beta value in each node of hidden layers 
                 [all_hsp_vals[i][epoch-1], L1_beta_vals[tg_index]] = hsp_fnc_inv_mat_cal(tmp_L1_beta_vals,classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates);
                 all_L1_beta_vals[i][epoch-1]= L1_beta_vals[tg_index];
                  
@@ -403,6 +389,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
         train_mse[epoch-1] = np.mean(minibatch_all_avg_mse)
         test_mse[epoch-1] = np.mean(test_mses)
         
+        # display current states
         disply_text.write("epoch %i/%d, Tr.err= %.2f, Ts.err= %.2f, lr = %.6f, " % (epoch,n_epochs,train_errors[epoch-1],test_errors[epoch-1],learning_rate))
         
         for layer_idx in xrange(len(n_nodes)-2):
@@ -414,7 +401,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
             else:
                 disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.3f, " % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,cnt_beta_val[layer_idx]))
                 
-        # Display saved variables                 
+        # Display variables                 
         print disply_text.getvalue()
         disply_text.close()
         
@@ -423,12 +410,14 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     if not os.path.exists(sav_path):
         os.makedirs(sav_path)
         
-    end_time = timeit.default_timer()
+    end_time = timeit.default_timer() # computational time estimation 
     cst_time = (end_time - start_time) / 60.
     print >> sys.stderr, ('\n The code for file ' + os.path.split(__file__)[1] +
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
-     
+    
+    # prepare to save important variables 
     sav_text = StringIO.StringIO();
+    
     for layer_idx in xrange(len(n_nodes)-2):
         if layer_idx==len(n_nodes)-3:
             sav_text.write("%d" % (n_nodes[layer_idx+1]))
@@ -461,7 +450,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     
     sio.savemat(sav_name,data_variable)
 
-    print '...done!'
+    print('...done!')
 
 if __name__ == '__main__':
     test_mlp()
