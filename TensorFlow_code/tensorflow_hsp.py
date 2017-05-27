@@ -51,13 +51,13 @@ total_epoch=600
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after 5th epoch
-beginAnneal=90
+beginAnneal=75
 # Set initial learning rate and minimum                     
 lr_init = 1e-3    
 min_lr = 1e-4
 
 # Set learning rate of beta for weight sparsity control
-lr_beta = 1e-2
+lr_beta = 0.02
 # Set L2 parameter for L2 regularization
 L2_param= 1e-5
 
@@ -80,20 +80,18 @@ train_input = dataset['train_x']
 test_input = dataset['test_x']
 
 
+# Split the dataset into traning output 
+train_output = np.zeros((np.shape(dataset['train_y'])[0],np.max(dataset['train_y'])+1))
+# trainsform classes into One-hot
+for i in np.arange(np.shape(dataset['train_y'])[0]):
+    train_output[i][dataset['train_y'][i][0]]=1 
+dataset['train_y']
 
-if autoencoder==False:  
-    # Split the dataset into traning output 
-    train_output = np.zeros((np.shape(dataset['train_y'])[0],np.max(dataset['train_y'])+1))
-    # trainsform classes into One-hot
-    for i in np.arange(np.shape(dataset['train_y'])[0]):
-        train_output[i][dataset['train_y'][i][0]]=1 
-    dataset['train_y']
-    
-    # Split the dataset into test output
-    test_output = np.zeros((np.shape(dataset['test_y'])[0],np.max(dataset['test_y'])+1))
-    # trainsform classes into One-hot
-    for i in np.arange(np.shape(dataset['test_y'])[0]):
-        test_output[i][dataset['test_y'][i][0]]=1 
+# Split the dataset into test output
+test_output = np.zeros((np.shape(dataset['test_y'])[0],np.max(dataset['test_y'])+1))
+# trainsform classes into One-hot
+for i in np.arange(np.shape(dataset['test_y'])[0]):
+    test_output[i][dataset['test_y'][i][0]]=1 
 
 
 
@@ -280,15 +278,16 @@ if not autoencoder:
 
 ############################################# Condition check part #############################################
 
+
 condition=False
 
 print()
 
 if np.shape(nodes)[0] <3:
     print("Error : Not enough hidden layer number.")
-elif np.shape(train_input)[0] != np.shape(train_output)[0]:
+elif (autoencoder==False) & (np.shape(train_input)[0] != np.shape(train_output)[0]):
     print("Error : The sizes of input train dataset and output train dataset don't match. ")  
-elif np.shape(test_input)[0] != np.shape(test_output)[0]:
+elif (autoencoder==False) & (np.shape(test_input)[0] != np.shape(test_output)[0]):
     print("Error : The sizes of input test dataset and output test dataset don't match. ")     
 elif not ((mode=='layer') | (mode=='node')):
     print("Error : Select a valid mode. ") 
@@ -298,8 +297,6 @@ elif autoencoder!=True & autoencoder!=False:
     print("Error : Please set the autoencoder mode appropriately.")
 else:
     condition=True
-
-
 
 
 ################################################ Training & test part ################################################
@@ -346,7 +343,7 @@ if condition==True:
         
            
         # Calculate how many mini-batch iterations
-        total_batch=int(np.shape(train_output)[0]/batch_size) 
+        total_batch=int(np.shape(train_input)[0]/batch_size) 
                
         # train and get cost
         cost_avg=0.0
@@ -363,7 +360,8 @@ if condition==True:
             # Train at each mini batch    
             for batch in np.arange(total_batch):
                 batch_x = train_input[batch*batch_size:(batch+1)*batch_size]
-                batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
+                if autoencoder==False:
+                    batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
                 
                 # Get cost and optimize the model
                 if autoencoder:
