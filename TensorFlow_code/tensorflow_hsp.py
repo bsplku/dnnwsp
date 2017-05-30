@@ -51,7 +51,9 @@ total_epoch=600
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after 5th epoch
-beginAnneal=75
+beginAnneal=90
+# anealing decay rate
+decay_rate=1e-4
 # Set initial learning rate and minimum                     
 lr_init = 1e-3    
 min_lr = 1e-4
@@ -78,6 +80,7 @@ tg_hsp = [0.7, 0.65, 0.65]
 train_input = dataset['train_x']
 # Split the dataset into test input
 test_input = dataset['test_x']
+
 
 
 # Split the dataset into traning output 
@@ -266,12 +269,8 @@ optimizer=build_optimizer(Lr)
 if not autoencoder:
     correct_prediction=tf.equal(tf.argmax(output_layer,1),tf.argmax(Y,1))  
         
-    # calculate mean accuracy depending on the frequency it predicts correctly
-    accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
-
-
-
-
+    # calculate mean error(accuracy) depending on the frequency it predicts correctly   
+    error=1-tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
 
 
 
@@ -333,10 +332,12 @@ if condition==True:
             # make arrays to plot results
             plot_lr=np.zeros(1)
             plot_cost=np.zeros(1)
+            plot_train_err=np.zeros(1)
+            plot_test_err=np.zeros(1)
             
-            return beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost
+            return beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err
                 
-        beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost = initialization()
+        beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err = initialization()
         
                
 
@@ -354,14 +355,13 @@ if condition==True:
             if beginAnneal == 0:
                 lr = lr * 1.0
             elif epoch+1 > beginAnneal:
-                lr = max( min_lr, (-0.01*(epoch+1) + (1+0.0001*beginAnneal)) * lr )        
+                lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr )  
             
             
             # Train at each mini batch    
             for batch in np.arange(total_batch):
                 batch_x = train_input[batch*batch_size:(batch+1)*batch_size]
-                if autoencoder==False:
-                    batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
+                batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
                 
                 # Get cost and optimize the model
                 if autoencoder:
@@ -371,20 +371,7 @@ if condition==True:
                     
                 cost_epoch+=cost_batch/total_batch      
         
-                # make space to plot beta, sparsity level
-                plot_lr=np.hstack([plot_lr,[lr]])
-                plot_cost=np.hstack([plot_cost,[cost_batch]])
-
                 
-                # save footprint for plot
-                if mode=='layer':
-                    plot_hsp=[np.vstack([plot_hsp[i],[hsp[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
-                    plot_beta=[np.vstack([plot_beta[i],[beta_vec[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
-                    
-                elif mode=='node':
-                    plot_hsp=[np.vstack([plot_hsp[i],[np.transpose(hsp[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
-                    plot_beta=[np.vstack([plot_beta[i],[np.transpose(beta[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
-
                 
         
                 # run weight sparsity control function
@@ -396,15 +383,38 @@ if condition==True:
                 elif mode=='node':                              
                     beta_vec=[item for sublist in beta for item in sublist]
                     
+            train_err_epoch=sess.run(error,feed_dict={X:train_input, Y:train_output})
+            plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
+            
+            test_err_epoch=sess.run(error,feed_dict={X:test_input, Y:test_output})
+            plot_test_err=np.hstack([plot_test_err,[test_err_epoch]])
+            
+            
+            # make space to plot beta, sparsity level
+            plot_lr=np.hstack([plot_lr,[lr]])
+            plot_cost=np.hstack([plot_cost,[cost_epoch]])
+
+            
+            # save footprint for plot
+            if mode=='layer':
+                plot_hsp=[np.vstack([plot_hsp[i],[hsp[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
+                plot_beta=[np.vstack([plot_beta[i],[beta_vec[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
+                
+            elif mode=='node':
+                plot_hsp=[np.vstack([plot_hsp[i],[np.transpose(hsp[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
+                plot_beta=[np.vstack([plot_beta[i],[np.transpose(beta[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
+
+            
                     
             # Print cost at each epoch        
             print("< Epoch", "{:02d}".format(epoch+1),"> Cost : ", "{:.4f}".format(cost_epoch))
+            
 
 
 
         # Print final accuracy of test set
         if not autoencoder:
-            print("Accuracy :",sess.run(accuracy,feed_dict={X:test_input, Y:test_output}))
+            print("Accuracy :",1-test_err_epoch)
             
 else:
     # Don't run the sesstion but print 'failed' if any condition is unmet
@@ -413,6 +423,9 @@ else:
     
     
 ################################################ Plot & save results part ################################################
+
+
+
 if condition==True:
        
     # Plot the change of learning rate
@@ -426,7 +439,24 @@ if condition==True:
     plt.title("Cost plot",fontsize=16)
     plot_cost=plot_cost[1:]
     plt.plot(plot_cost)
-    plt.show()      
+    plt.yscale('log')
+    plt.show()     
+    
+    
+
+    # Plot test error
+    plt.title("Training & Test error",fontsize=16)
+    plot_test_err=plot_test_err[1:]
+    plt.plot(plot_train_err)
+    plt.hold
+    plt.plot(plot_test_err)
+    plt.ylim(0.0, 1.0)
+    plt.legend(['Training error', 'Test error'],loc='upper right')
+#    plt.yscale('log')
+    plt.show() 
+    
+
+ 
     
     
     # Plot the change of beta value
