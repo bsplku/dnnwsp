@@ -18,8 +18,6 @@ References:
                  Christopher M. Bishop, section 5
 
 """
-__docformat__ = 'restructedtext en'
-
 import os
 import sys
 import timeit
@@ -32,7 +30,11 @@ import theano
 import theano.tensor as T
 
 from logistic_sgd import LogisticRegression
-import StringIO 
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from numpy import linalg as LA
 
@@ -161,7 +163,7 @@ class MLP(object):
         if len(n_nodes) > 2:
             self.hiddenLayer = []
             
-            for i in xrange(len(n_nodes)-2):
+            for i in range(len(n_nodes)-2):
                 
                 if i == 0:
                     hidden_input = input
@@ -194,12 +196,12 @@ class MLP(object):
         # end-snippet-2 start-snippet-3
         
         self.L1 = []
-        for i in xrange(len(n_nodes)-2):
+        for i in range(len(n_nodes)-2):
             self.L1.append( abs(self.hiddenLayer[i].W).sum() )
         self.L1.append( abs(self.logRegressionLayer.W).sum() )    
         
         self.L2_sqr = 0
-        for i in xrange(len(n_nodes)-2):
+        for i in range(len(n_nodes)-2):
             self.L2_sqr += (self.hiddenLayer[i].W ** 2).sum()
         self.L2_sqr += ((self.logRegressionLayer.W ** 2).sum())
 
@@ -215,7 +217,7 @@ class MLP(object):
         
         self.params = []
         if len(n_nodes) > 2:
-            for i in xrange(len(n_nodes)-2):
+            for i in range(len(n_nodes)-2):
                 self.params.extend(self.hiddenLayer[i].params)
         self.params.extend(self.logRegressionLayer.params)
         
@@ -225,13 +227,13 @@ class MLP(object):
         self.input = input
         
         self.bnUpdates = []
-        for i in xrange(len(n_nodes)-2):
+        for i in range(len(n_nodes)-2):
             self.bnUpdates.extend(self.hiddenLayer[i].updates)
         
 def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
              datasets='lhrhadvs_sample_data.mat',  # load data
              # activation:  # sigmoid function: T.nnet.sigmoid, hyperbolic tangent function: T.tanh, Rectified Linear Unit: relu1
-             batch_size=100, n_epochs = 500, learning_rate=1e-3, activation =T.tanh,
+             batch_size=60, n_epochs = 500, learning_rate=1e-3, activation =T.tanh,
              beginAnneal=200, min_annel_lrate = 1e-4, decay_rate = 1e-4, momentum_val=0.00,
 
              # Select optimizer 'Grad' for GradientDescentOptimizer, 'Adam' for AdamOptimizer, 'Rmsp' for RMSPropOptimizer
@@ -243,7 +245,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
              beta_lrates = 1e-2,        L2_reg = 1e-5,  
              
              # Save path  
-             sav_path = '/home/khc/workspace/prni2017',
+             sav_path = '/Users/bspl/Downloads/prni2017',
               ):
     
     cnt_hsp_val = np.zeros(len(n_nodes)-2);    
@@ -270,13 +272,13 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     test_set_y = T.cast(theano.shared(test_y.flatten(),borrow=True),'int32')
 
     # compute number of minibatches for training, validation and testing
-    n_train_batches = train_set_x.get_value(borrow=True).shape[0] / batch_size
-    n_test_batches = test_set_x.get_value(borrow=True).shape[0] / batch_size
-
+    n_train_batches = int(train_set_x.get_value(borrow=True).shape[0] / batch_size)
+    n_test_batches = int(test_set_x.get_value(borrow=True).shape[0] / batch_size)
+    
     #####################
     # BUILD ACTUAL MODEL #
     ######################
-    print '... building the model'
+    print('... building the model')
 
     # allocate symbolic variables for the data
     index = T.lscalar()  # index to a [mini]batch
@@ -302,14 +304,14 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     # start-snippet-4
     cost = (classifier.negative_log_likelihood(y))
     
-    for i in xrange(len(n_nodes)-2):
+    for i in range(len(n_nodes)-2):
         cost += l1_penalty_layer[i] * classifier.L1[i]
     cost += L2_reg * classifier.L2_sqr    
     # end-snippet-4
     
     updates_test = []
     for hiddenlayer in classifier.hiddenLayer:
-        for i in xrange(1):
+        for i in range(1):
             updates_test.append( hiddenlayer.updates[i] )
            
     test_model = theano.function(
@@ -358,7 +360,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     ###############
     # TRAIN MODEL #
     ###############
-    print '... training'
+    print('... training')
 
     # early-stopping parameters
     test_score = 0.
@@ -379,20 +381,20 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
         epoch = epoch + 1
         minibatch_all_avg_error = []; minibatch_all_avg_mse = []
 
-        for minibatch_index in xrange(n_train_batches):
-            disply_text = StringIO.StringIO();
+        for minibatch_index in range(n_train_batches):
+            disply_text = StringIO();
             minibatch_avg_cost, minibatch_avg_error, minibatch_avg_mse = train_model(minibatch_index, L1_beta_vals,learning_rate,momentum_val)
             minibatch_all_avg_error.append(minibatch_avg_error)
             minibatch_all_avg_mse.append(minibatch_avg_mse)
              
-            for i in xrange(len(n_nodes)-2):
+            for i in range(len(n_nodes)-2):
                 [cnt_hsp_val[i], L1_beta_vals[i]] = hsp_fnc(L1_beta_vals[i],classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates);
                 
             # iteration number
             iter = (epoch - 1) * n_train_batches + minibatch_index
             # test it on the test set
             test_losses = []; test_mses = []
-            for i in xrange(n_test_batches):
+            for i in range(n_test_batches):
                 test_losses.append(test_model(i)[0])
                 test_mses.append(test_model(i)[1])
             test_score = numpy.mean(test_losses); 
@@ -413,14 +415,14 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
         test_mse[epoch-1] = np.mean(test_mses)
         
         disply_text.write("epoch %i/%d, Tr.err= %.2f, Ts.err= %.2f, lr = %.6f, " % (epoch,n_epochs,train_errors[epoch-1],test_errors[epoch-1],learning_rate))
-        for layer_idx in xrange(len(n_nodes)-2):
+        for layer_idx in range(len(n_nodes)-2):
             if (layer_idx==len(n_nodes)-3):
                 disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.2f" % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,L1_beta_vals[layer_idx]))
             else:
                 disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.2f, " % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,L1_beta_vals[layer_idx]))
         
         # Display saved variables                 
-        print disply_text.getvalue()
+        print(disply_text.getvalue())
         disply_text.close()
         
         lrs[epoch-1] = learning_rate
@@ -433,8 +435,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     print >> sys.stderr, ('\n The code for file ' + os.path.split(__file__)[1] +
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
      
-    sav_text = StringIO.StringIO();
-    for layer_idx in xrange(len(n_nodes)-2):
+    sav_text = StringIO();
+    for layer_idx in range(len(n_nodes)-2):
         if layer_idx==len(n_nodes)-3:
             sav_text.write("%d" % (n_nodes[layer_idx+1]))
         else:
@@ -445,7 +447,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
         
     data_variable = {}; 
 
-    for i in xrange(len(n_nodes)-1):
+    for i in range(len(n_nodes)-1):
         if (i==len(n_nodes)-2): 
             W_name = "w%d" %(i+1); b_name = "b%d" % (i+1); 
             data_variable[W_name] = classifier.logRegressionLayer.W.get_value(borrow=True)
@@ -467,7 +469,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodes
     data_variable['n_nodes'] = n_nodes;
     sio.savemat(sav_name,data_variable)
 
-    print '...done!'
+    print('...done!')
 
 if __name__ == '__main__':
     test_mlp()
