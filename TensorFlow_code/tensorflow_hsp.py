@@ -496,11 +496,3 @@ if condition==True:
 else:
     None 
   
-    
-    
-    
-#             if i<(np.shape(nodes)[0]-2):
-#            print("                  < Hidden layer",i+1,">")
-#        else:
-#            print("                  < Output layer >")
-
