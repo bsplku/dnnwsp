@@ -18,9 +18,6 @@ References:
                  Christopher M. Bishop, section 5
 
 """
-__docformat__ = 'restructedtext en'
-
-import os
 import sys
 import timeit
 
@@ -32,52 +29,38 @@ import theano
 import theano.tensor as T
 
 from logistic_sgd import LogisticRegression
-import StringIO 
+
+try:
+    from StringIO import StringIO
+except ImportError:
+        from io import StringIO
 
 from numpy import linalg as LA
 
-
-# def hsp_fnc(betaval_L1, W, max_beta, tg_hsp, beta_lrate):
-#     W = W.get_value(borrow=True)
-#     Wvec = W.flatten();
-#     sqrt_nsamps = pow((Wvec.shape[0]),0.5)
-#     
-#     n1_W = LA.norm(Wvec,1);    n2_W = LA.norm(Wvec,2);
-#     hspvalue = (sqrt_nsamps-(n1_W/n2_W))/(sqrt_nsamps-1);
-# 
-#     betaval_L1 -= beta_lrate*np.sign(hspvalue-tg_hsp) 
-# 
-#     betaval_L1 = 0 if betaval_L1<0 else betaval_L1
-#     betaval_L1 = max_beta if betaval_L1>max_beta else betaval_L1
-# 
-#     return [hspvalue, betaval_L1]
-
-def hsp_fnc(beta_val_L1, W, max_beta, tg_hsp, beta_lrate,flag_inv_control):
+# def node-wise or layer-wise control of weight sparsity via Hoyer sparseness
+# (Hoyer, 2014, Kim and Lee PRNI2016, Kim and Lee ICASSP 2017) 
+def hsp_fnc(beta_val_L1, W, max_beta, tg_hsp, beta_lrate,flag_nodewise):
     W = np.array(W.get_value(borrow=True));
     
     cnt_L1_ly = beta_val_L1;
     
-    if flag_inv_control==1:
+    if flag_nodewise==1:
         [dim, nodes] = W.shape
         hsp_vec = np.zeros((1,nodes));  
         tg_hsp_vec = np.ones(nodes)*tg_hsp;
         sqrt_nsamps = pow(dim,0.5)
         n1_W = LA.norm(W,1,axis=0);    n2_W = LA.norm(W,2,axis=0);
         hsp_vec = (sqrt_nsamps - (n1_W/n2_W))/(sqrt_nsamps-1)
-    
         cnt_L1_ly -= beta_lrate*np.sign(hsp_vec-tg_hsp_vec)
 
         for ii in xrange(0,nodes):
             cnt_L1_ly[ii] = 0 if cnt_L1_ly[ii] < 0 else cnt_L1_ly[ii]
             cnt_L1_ly[ii] = max_beta if cnt_L1_ly[ii]>max_beta else cnt_L1_ly[ii]
-            
     else:
         Wvec = W.flatten();
         sqrt_nsamps = pow((Wvec.shape[0]),0.5)
-    
         n1_W = LA.norm(Wvec,1);    n2_W = LA.norm(Wvec,2);
         hspvalue = (sqrt_nsamps-(n1_W/n2_W))/(sqrt_nsamps-1);
-
         cnt_L1_ly -= beta_lrate*np.sign(hspvalue-tg_hsp) 
         
         cnt_L1_ly = 0 if cnt_L1_ly<0 else cnt_L1_ly
@@ -122,7 +105,6 @@ def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8,
     updates = []
     all_grads = [T.grad(cost, param) for param in params]
 
-#     all_grads = T.grad(cost, params)
     alpha = learning_rate
     t = theano.shared(np.float32(1))
     b1_t = b1*gamma**(t-1)   #(Decay the first moment running average coefficient)
@@ -144,13 +126,11 @@ def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8,
     updates.append((t, t + 1.))
     return updates
 
-# start-snippet-1
 class HiddenLayer(object):
     def __init__(self, rng, input, n_in, n_out, W=None, b=None,
                  activation=T.nnet.sigmoid):
 
         self.input = input
-        # end-snippet-1
 
         if W is None:
             W_values = numpy.asarray(
@@ -161,9 +141,7 @@ class HiddenLayer(object):
                 ),
                 dtype=theano.config.floatX
             )
-#             if activation == theano.tensor.nnet.sigmoid:
-#                 W_values *= 4
-            W = theano.shared(value=W_values, name='W', borrow=True)
+        W = theano.shared(value=W_values, name='W', borrow=True)
             
         if b is None:
             b_values = numpy.zeros((n_out,), dtype=theano.config.floatX)
@@ -277,10 +255,10 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              # max_beta=[0.05, 0.8, 0.8], # Maximum beta changes
              beta_lrates = 1e-2,        L2_reg = 1e-5,
              
-            # flag_inv_control =1 is the node-wise control of weight sparsity 
-            # flag_inv_control =0 is the layer-wise control of weight sparsity
+            # flag_nodewise =1 is the node-wise control of weight sparsity 
+            # flag_nodewise =0 is the layer-wise control of weight sparsity
             
-             flag_inv_control = 0,
+             flag_nodewise = 0,
              # Save path  
              sav_path = '/home/khc/workspace/prni2017',  
               ):
@@ -337,7 +315,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     # cost function
     cost = (classifier.negative_log_likelihood(y))
     
-    if flag_inv_control==1:
+    if flag_nodewise==1:
         for i in xrange(len(n_nodes)-2):
             node_size = n_nodes[i+1]; tg_index = np.arange((i * node_size),((i + 1) * node_size));
             cost += (T.dot(abs(classifier.hiddenLayer[i].W),l1_penalty_layer[tg_index])).sum();
@@ -411,7 +389,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     lrs = np.zeros(n_epochs); lrate_list = np.zeros(n_epochs);
     
     # define variables
-    if flag_inv_control==1:
+    if flag_nodewise==1:
         hsp_avg_vals =[]; L1_beta_avg_vals=[];  all_hsp_vals =[]; all_L1_beta_vals=[];
         L1_beta_vals = np.zeros(np.sum(n_nodes[1:(len(n_nodes)-1)]));
         cnt_hsp_val = np.zeros(len(n_nodes)-2); 
@@ -437,20 +415,20 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         minibatch_all_avg_error = []; minibatch_all_avg_mse = []
 
         for minibatch_index in xrange(n_train_batches):
-            disply_text = StringIO.StringIO();
+            disply_text = StringIO();
             minibatch_avg_cost, minibatch_avg_error, minibatch_avg_mse = train_model(minibatch_index, L1_beta_vals,learning_rate,momentum_val)
             minibatch_all_avg_error.append(minibatch_avg_error)
             minibatch_all_avg_mse.append(minibatch_avg_mse)
              
-            if flag_inv_control==1:
+            if flag_nodewise==1:
                 for i in xrange(len(n_nodes)-2):
                     node_size = n_nodes[i+1]; tg_index = np.arange((i * node_size),((i + 1) * node_size));
                     tmp_L1_beta_vals = L1_beta_vals[tg_index]
-                    [all_hsp_vals[i][epoch-1], L1_beta_vals[tg_index]] = hsp_fnc(tmp_L1_beta_vals,classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates,flag_inv_control);
+                    [all_hsp_vals[i][epoch-1], L1_beta_vals[tg_index]] = hsp_fnc(tmp_L1_beta_vals,classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates,flag_nodewise);
                     all_L1_beta_vals[i][epoch-1]= L1_beta_vals[tg_index];
             else:
                 for i in xrange(len(n_nodes)-2):
-                    [cnt_hsp_val[i], L1_beta_vals[i]] = hsp_fnc(L1_beta_vals[i],classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates,flag_inv_control);
+                    [cnt_hsp_val[i], L1_beta_vals[i]] = hsp_fnc(L1_beta_vals[i],classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates,flag_nodewise);
                 
             # iteration number
             iter = (epoch - 1) * n_train_batches + minibatch_index
@@ -473,7 +451,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         train_mse[epoch-1] = np.mean(minibatch_all_avg_mse)
         test_mse[epoch-1] = np.mean(test_mses)
         
-        if flag_inv_control ==1:
+        if flag_nodewise ==1:
             disply_text.write("Node-wise control, epoch %i/%d, Tr.err= %.2f, Ts.err= %.2f, lr = %.6f, " % (epoch,n_epochs,train_errors[epoch-1],test_errors[epoch-1],learning_rate))
 
             for layer_idx in xrange(len(n_nodes)-2):
