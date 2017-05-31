@@ -32,20 +32,11 @@ References:
                  Christopher M. Bishop, section 4.3.2
 
 """
-__docformat__ = 'restructedtext en'
-
-import cPickle
-import gzip
-import os
-import sys
-import timeit
-
 import numpy
 import scipy.io
 
 import theano
 import theano.tensor as T
-
 
 class LogisticRegression(object):
     """Multi-class Logistic Regression Class
@@ -193,6 +184,6 @@ class LogisticRegression(object):
     def mse(self, batch_size, output_size, y):
         
         y2 = T.zeros([batch_size,output_size])
-        y2 = T.set_subtensor(y2[xrange(0,batch_size),y],1.0)
+        y2 = T.set_subtensor(y2[range(0,batch_size),y],1.0)
 
         return T.sum(T.pow(self.p_y_given_x-y2, 2)) / batch_size
