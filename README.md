@@ -5,7 +5,7 @@
 * In this toobox, we provide Python-based software toolboxes of the method utilizing either Theano or TensorFlow library. 
 
 # Sample data
-* We provide fMRI data as the [sample data](bspl.korea.ac.kr/lhrhadvs_sample_data.mat) that were acquired during the four sensorimotor tasks inclduing lef-thand clecnhing , right-hand clecnhing, auditory attention, and visual stimulus tasks [2]. 
+* We provide [fMRI sample data](bspl.korea.ac.kr/lhrhadvs_sample_data.mat) that were acquired during the four sensorimotor tasks inclduing lef-thand clecnhing, right-hand clecnhing, auditory attention, and visual stimulus tasks [2]. 
 
 # Requestment 
 * Python3.6 with libraries including the Theano and/or TensorFlow. 
