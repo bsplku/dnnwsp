@@ -1,7 +1,4 @@
 """
-This tutorial introduces logistic regression using Theano and stochastic
-gradient descent.
-
 Logistic regression is a probabilistic, linear classifier. It is parametrized
 by a weight matrix :math:`W` and a bias vector :math:`b`. Classification is
 done by projecting data points onto a set of hyperplanes, the distance to
@@ -63,25 +60,6 @@ class LogisticRegression(object):
                       which the labels lie
 
         """
-        # start-snippet-1
-        # initialize with 0 the weights W as a matrix of shape (n_in, n_out)
-#         self.W = theano.shared(
-#             value=numpy.zeros(
-#                 (n_in, n_out),
-#                 dtype=theano.config.floatX
-#             ),
-#             name='W',
-#             borrow=True
-#         )
-#         # initialize the biases b as a vector of n_out 0s
-#         self.b = theano.shared(
-#             value=numpy.zeros(
-#                 (n_out,),
-#                 dtype=theano.config.floatX
-#             ),
-#             name='b',
-#             borrow=True
-#         )
         rng = numpy.random.RandomState(1234)
 
         W_values = numpy.asarray(
@@ -92,9 +70,7 @@ class LogisticRegression(object):
                 ),
                 dtype=theano.config.floatX
             )
-#             if activation == theano.tensor.nnet.sigmoid:
-#                 W_values *= 4
-
+        
         W = theano.shared(value=W_values, name='W', borrow=True)
             
         b_values = numpy.zeros((n_out,), dtype=theano.config.floatX)
@@ -142,7 +118,6 @@ class LogisticRegression(object):
         Note: we use the mean instead of the sum so that
               the learning rate is less dependent on the batch size
         """
-        # start-snippet-2
         # y.shape[0] is (symbolically) the number of rows in y, i.e.,
         # number of examples (call it n) in the minibatch
         # T.arange(y.shape[0]) is a symbolic vector which will contain
@@ -153,9 +128,9 @@ class LogisticRegression(object):
         # LP[n-1,y[n-1]]] and T.mean(LP[T.arange(y.shape[0]),y]) is
         # the mean (across minibatch examples) of the elements in v,
         # i.e., the mean log-likelihood across the minibatch.
+        
         return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]), y])
 #         return - T.sum(y * T.log(self.p_y_given_x) + (1 - y) * T.log(1 - self.p_y_given_x), axis=1) 
-        # end-snippet-2
 
     def errors(self, y):
         """Return a float representing the number of errors in the minibatch

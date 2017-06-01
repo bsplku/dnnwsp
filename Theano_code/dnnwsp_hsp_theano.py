@@ -147,7 +147,7 @@ class HiddenLayer(object):
 
 class MLP(object):
     
-    def __init__(self, rng, input, n_nodes, pretrained=None, activation=T.nnet.sigmoid):
+    def __init__(self, rng, input, n_nodes, activation=T.nnet.sigmoid):
 
         if len(n_nodes) > 2:
             self.hiddenLayer = []
@@ -170,8 +170,8 @@ class MLP(object):
                         activation=activation
                     )
                 )
-        # The logistic regression layer gets as input the hidden units
-        # of the hidden layer
+                
+        # The logistic regression layer gets as input the hidden units of the hidden layer
         if len(n_nodes) == 2:
             logistic_input = input
         else:
@@ -214,10 +214,6 @@ class MLP(object):
         # keep track of model input
         self.input = input
         
-        self.bnUpdates = []
-        for i in range(len(n_nodes)-2):
-            self.bnUpdates.extend(self.hiddenLayer[i].updates)
-        
 def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              datasets='lhrhadvs_sample_data.mat',  # load data
              
@@ -233,7 +229,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              tg_hspset=[0.7, 0.5, 0.5], # Target sparsity
              max_beta=[0.05, 0.9, 0.9], # Maximum beta changes
              
-            # Parameters for the layer-wise control of weight sparsity 
+             # Parameters for the layer-wise control of weight sparsity 
              # tg_hspset=[0.7, 0.5, 0.5], # Target sparsity 
              # max_beta=[0.05, 0.8, 0.8], # Maximum beta changes
              beta_lrates = 1e-2,        L2_reg = 1e-5,
@@ -271,7 +267,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     n_test_batches = int(test_set_x.get_value(borrow=True).shape[0] / batch_size)
 
     #####################
-    # BUILD ACTUAL MODEL #
+    # BUILD A MODEL #
     ######################
     print('... building the model')
 
@@ -292,7 +288,6 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         input=x,
         n_nodes = n_nodes,
         activation = activation,
-        pretrained = None
     )
 
     # cost function
@@ -360,18 +355,16 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     ###############
     print('... training')
 
-    # early-stopping parameters
     test_score = 0. 
     start_time = timeit.default_timer()
 
     epoch = 0;    done_looping = False
     
-    # To check training
+    # Define variables to save/check training model 
     train_errors = np.zeros(n_epochs);    test_errors = np.zeros(n_epochs);
     train_mse = np.zeros(n_epochs);    test_mse = np.zeros(n_epochs);
     lrs = np.zeros(n_epochs); lrate_list = np.zeros(n_epochs);
     
-    # define variables
     if flag_nodewise==1:
         hsp_avg_vals =[]; L1_beta_avg_vals=[];  all_hsp_vals =[]; all_L1_beta_vals=[];
         L1_beta_vals = np.zeros(np.sum(n_nodes[1:(len(n_nodes)-1)]));
@@ -392,17 +385,19 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         L1_beta_vals= np.zeros(len(n_nodes)-2)
         cnt_hsp_val = np.zeros(len(n_nodes)-2);    
 
-     # training 
+    # start training 
     while (epoch < n_epochs) and (not done_looping):
         epoch = epoch + 1
         minibatch_all_avg_error = []; minibatch_all_avg_mse = []
 
+        # minibatch based training
         for minibatch_index in range(n_train_batches):
             disply_text = StringIO();
             minibatch_avg_cost, minibatch_avg_error, minibatch_avg_mse = train_model(minibatch_index, L1_beta_vals,learning_rate,momentum_val)
             minibatch_all_avg_error.append(minibatch_avg_error)
             minibatch_all_avg_mse.append(minibatch_avg_mse)
              
+            # Node-wise or layer-wise control of weight sparsity 
             if flag_nodewise==1:
                 for i in range(len(n_nodes)-2):
                     node_size = n_nodes[i+1]; tg_index = np.arange((i * node_size),((i + 1) * node_size));
@@ -434,6 +429,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         train_mse[epoch-1] = np.mean(minibatch_all_avg_mse)
         test_mse[epoch-1] = np.mean(test_mses)
         
+        
+        # Node-wise or layer-wise control of weight sparsity to display the current state of training 
         if flag_nodewise ==1:
             disply_text.write("Node-wise control, epoch %i/%d, Tr.err= %.2f, Ts.err= %.2f, lr = %.6f, " % (epoch,n_epochs,train_errors[epoch-1],test_errors[epoch-1],learning_rate))
 
@@ -453,12 +450,13 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
             else:
                 disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.2f, " % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,L1_beta_vals[layer_idx]))
                     
-        # Display saved variables                 
+        # Display variables                 
         print(disply_text.getvalue())
         disply_text.close()
         
         lrs[epoch-1] = learning_rate
-                    
+
+    # make a new directory to save data
     if not os.path.exists(sav_path):
         os.makedirs(sav_path)
         
