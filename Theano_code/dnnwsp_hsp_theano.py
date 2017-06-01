@@ -1,5 +1,11 @@
 """
-Deep neural network (DNN) with weight sparsity control (i.e., L1-norm regularization) improved the classification performance using whole-brain resting-state functional connectivity patterns of schizophrenia patient and healthy groups. Initializing DNN's weights through stacked auto-encoder enhanced the classification performance as well. (Jang et al., Neuroimage 2017, Kim et al., Neuroimage, 2016). The Python codes were modified from the DeepLearningTutorials (https://github.com/lisa-lab/DeepLearningTutorials) to apply a node-wise and layer-wise control of weight sparsity via Hoyer sparseness. 
+Deep neural network (DNN) with weight sparsity control (i.e., L1-norm regularization)
+improved the classification performance using whole-brain resting-state functional 
+connectivity patterns of schizophrenia patient and healthy groups. Initializing DNN's
+weights through stacked auto-encoder enhanced the classification performance as well. 
+(Jang et al., Neuroimage 2017, Kim et al., Neuroimage, 2016). The Python codes were 
+modified from the DeepLearningTutorials (https://github.com/lisa-lab/DeepLearningTutorials)
+to apply a node-wise and layer-wise control of weight sparsity via Hoyer sparseness. 
 """
 
 import sys
