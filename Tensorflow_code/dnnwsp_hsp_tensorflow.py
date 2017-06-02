@@ -18,7 +18,7 @@ Select the sparsity control mode
 'layer' for layer wise sparsity control
 'node' for node wise sparsity control
 """
-mode = 'node'
+mode = 'layer'
 
 
 """
@@ -41,17 +41,16 @@ dataset = scipy.io.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_samp
 Set the number of nodes for input, output and each hidden layer here
 """
 nodes=[74484,100,100,100,4]
-#nodes=[74484,500,74484]
 
 """
 Set learning parameters
 """
 # Set total epoch
-total_epoch=600
+total_epoch=400
 # Set mini batch size
 batch_size=100
-# Let anealing to begin after 5th epoch
-beginAnneal=90
+# Let anealing to begin after **th epoch
+beginAnneal=100
 # anealing decay rate
 decay_rate=1e-4
 # Set initial learning rate and minimum                     
@@ -63,16 +62,37 @@ lr_beta = 0.02
 # Set L2 parameter for L2 regularization
 L2_param= 1e-5
 
+#
+## Set total epoch
+#total_epoch=500
+## Set mini batch size
+#batch_size=100
+## Let anealing to begin after **th epoch
+#beginAnneal=200
+## anealing decay rate
+#decay_rate=1e-4
+## Set initial learning rate and minimum                     
+#lr_init = 1e-3    
+#min_lr = 1e-4
+#
+## Set learning rate of beta for weight sparsity control
+#lr_beta = 0.015
+## Set L2 parameter for L2 regularization
+#L2_param= 1e-5
+
+
 
 """
-Set maximum beta value of each hidden layer (usually 0.01~0.2) 
+Set maximum beta value of each hidden layer (usually 0.01~0.5) 
 and set target sparsness value (0:dense~1:sparse)
 """
-max_beta = [0.05, 0.8, 0.8]
-tg_hsp = [0.7, 0.65, 0.65]
 
-#max_beta = [0.02]
-#tg_hsp = [0.5]
+max_beta = [0.05, 0.75, 0.7]
+tg_hsp = [0.7, 0.7, 0.7]
+
+
+#max_beta = [0.07, 0.7, 0.7]
+#tg_hsp = [0.7, 0.7, 0.7]
 
 ################################################# Input data part #################################################
 
@@ -165,7 +185,7 @@ def build_L1loss():
 
 # Define cost term with cross entropy and L1 and L2 tetm     
 def build_cost():
-    if autoencoder:
+    if autoencoder==True:
         cost=tf.reduce_mean(tf.pow(X - output_layer, 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
     else:
         cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
@@ -266,7 +286,7 @@ Lr=tf.placeholder(tf.float32)
 optimizer=build_optimizer(Lr)
   
 
-if not autoencoder:
+if autoencoder==False:
     correct_prediction=tf.equal(tf.argmax(output_layer,1),tf.argmax(Y,1))  
         
     # calculate mean error(accuracy) depending on the frequency it predicts correctly   
@@ -292,8 +312,10 @@ elif not ((mode=='layer') | (mode=='node')):
     print("Error : Select a valid mode. ") 
 elif (np.any(np.array(tg_hsp)<0)) | (np.any(np.array(tg_hsp)>1)):  
     print("Error : Please set the target sparsities appropriately.")
-elif autoencoder!=True & autoencoder!=False:
+elif (autoencoder!=False) & (autoencoder!=True):
     print("Error : Please set the autoencoder mode appropriately.")
+elif (autoencoder==True) & (np.shape(nodes)[0]>3) & (not all(x == nodes[::2][0] for x in nodes[::2])):
+    print("Error : The number of nodes in autoencoder is wrong.")
 else:
     condition=True
 
@@ -364,7 +386,7 @@ if condition==True:
                 batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
                 
                 # Get cost and optimize the model
-                if autoencoder:
+                if autoencoder==True:
                     cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Beta_vec:beta_vec })
                 else:                   
                     cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
@@ -382,12 +404,13 @@ if condition==True:
                     beta_vec=beta                      
                 elif mode=='node':                              
                     beta_vec=[item for sublist in beta for item in sublist]
-                    
-            train_err_epoch=sess.run(error,feed_dict={X:train_input, Y:train_output})
-            plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
             
-            test_err_epoch=sess.run(error,feed_dict={X:test_input, Y:test_output})
-            plot_test_err=np.hstack([plot_test_err,[test_err_epoch]])
+            if autoencoder==False:
+                train_err_epoch=sess.run(error,feed_dict={X:train_input, Y:train_output})
+                plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
+                
+                test_err_epoch=sess.run(error,feed_dict={X:test_input, Y:test_output})
+                plot_test_err=np.hstack([plot_test_err,[test_err_epoch]])
             
             
             # make space to plot beta, sparsity level
@@ -413,8 +436,8 @@ if condition==True:
 
 
         # Print final accuracy of test set
-        if not autoencoder:
-            print("Accuracy :",1-test_err_epoch)
+        if autoencoder==False:
+            print("Accuracy :",1-sess.run(error,feed_dict={X:test_input, Y:test_output}))
             
 else:
     # Don't run the sesstion but print 'failed' if any condition is unmet
@@ -439,21 +462,26 @@ if condition==True:
     plt.title("Cost plot",fontsize=16)
     plot_cost=plot_cost[1:]
     plt.plot(plot_cost)
-    plt.yscale('log')
-    plt.show()     
+    plt.show()   
     
-    
-
-    # Plot test error
-    plt.title("Training & Test error",fontsize=16)
-    plot_test_err=plot_test_err[1:]
-    plt.plot(plot_train_err)
-    plt.hold
-    plt.plot(plot_test_err)
-    plt.ylim(0.0, 1.0)
-    plt.legend(['Training error', 'Test error'],loc='upper right')
+#    # Plot the change of cost
+#    plt.title("Cost plot (log scale)",fontsize=16)
+#    plt.plot(plot_cost)
 #    plt.yscale('log')
-    plt.show() 
+#    plt.show()     
+#    
+#    
+    if autoencoder==False:       
+        # Plot test error
+        plt.title("Training & Test error",fontsize=16)
+        plot_test_err=plot_test_err[1:]
+        plt.plot(plot_train_err)
+        plt.hold
+        plt.plot(plot_test_err)
+        plt.ylim(0.0, 1.0)
+        plt.legend(['Training error', 'Test error'],loc='upper right')
+    #    plt.yscale('log')
+        plt.show() 
     
 
  
@@ -490,17 +518,11 @@ if condition==True:
     # save results as .mat file
     scipy.io.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
     scipy.io.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
+    scipy.io.savemat("results/result_train_err.mat", mdict={'trainErr': plot_train_err})
+    scipy.io.savemat("results/result_test_err.mat", mdict={'testErr': plot_test_err})
     scipy.io.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
     scipy.io.savemat("results/result_hsp.mat", mdict={'hsp': plot_hsp})
 
 else:
     None 
   
-    
-    
-    
-#             if i<(np.shape(nodes)[0]-2):
-#            print("                  < Hidden layer",i+1,">")
-#        else:
-#            print("                  < Output layer >")
-
