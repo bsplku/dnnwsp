@@ -8,6 +8,7 @@ modified from the DeepLearningTutorials (https://github.com/lisa-lab/DeepLearnin
 to apply a node-wise and layer-wise control of weight sparsity via Hoyer sparseness. 
 """
 
+import os.path
 import sys
 import timeit
 
@@ -468,8 +469,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         
     end_time = timeit.default_timer()
     cst_time = (end_time - start_time) / 60.
-    print >> sys.stderr, ('\n The code for file ' + os.path.split(__file__)[1] +
-                          ' ran for %.2fm' % ((end_time - start_time) / 60.))
+    print(sys.stderr, ('\n The code for file ' + os.path.split(__file__)[1] +
+                          ' ran for %.2fm' % ((end_time - start_time) / 60.)))
      
     sav_text = StringIO();
     for layer_idx in range(len(n_nodes)-2):
