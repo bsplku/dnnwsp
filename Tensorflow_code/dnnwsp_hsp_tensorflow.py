@@ -384,16 +384,16 @@ if condition==True:
             elif epoch+1 > beginAnneal:
                 lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr )  
             
-            # shuffle data in every epoch
-            shuffled_order=np.random.randint(0,np.shape(train_input)[0],np.shape(train_input)[0])
-            train_in = np.array([ train_input[i] for i in shuffled_order])
-            train_out = np.array([ train_output[i] for i in shuffled_order])
-            
-            
+            # shuffle data in every epoch           
+            total_sample = np.size(train_input, axis=0)
+            sample_ids = np.arange(total_sample)
+            np.random.shuffle(sample_ids) 
+
+        
             # Train at each mini batch    
             for batch in np.arange(total_batch):
-                batch_x = train_in[batch*batch_size:(batch+1)*batch_size]
-                batch_y = train_out[batch*batch_size:(batch+1)*batch_size]
+                batch_x = train_input[sample_ids[batch*batch_size:(batch+1)*batch_size]]
+                batch_y = train_output[sample_ids[batch*batch_size:(batch+1)*batch_size]]
                 
                 # Get cost and optimize the model
                 if autoencoder==True:
@@ -416,7 +416,10 @@ if condition==True:
                     beta_vec=[item for sublist in beta for item in sublist]
             
             if autoencoder==False:
-                train_err_epoch=sess.run(error,feed_dict={X:train_in, Y:train_out})
+                train_input_suff = np.array([ train_input[i] for i in sample_ids])
+                train_output_suff = np.array([ train_output[i] for i in sample_ids])
+                
+                train_err_epoch=sess.run(error,feed_dict={X:train_input_suff, Y:train_output_suff})
                 plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
                 
                 test_err_epoch=sess.run(error,feed_dict={X:test_input, Y:test_output})
