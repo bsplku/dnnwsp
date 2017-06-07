@@ -46,7 +46,7 @@ nodes=[74484,100,100,100,4]
 Set learning parameters
 """
 # Set total epoch
-total_epoch=400
+total_epoch=300
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after **th epoch
@@ -88,7 +88,7 @@ and set target sparsness value (0:dense~1:sparse)
 """
 
 max_beta = [0.05, 0.75, 0.7]
-tg_hsp = [0.7, 0.7, 0.7]
+tg_hsp = [0.5, 0.5, 0.5]
 
 
 #max_beta = [0.07, 0.7, 0.7]
@@ -176,8 +176,11 @@ def build_betavec():
 def build_L1loss():
     if mode=='layer':
         L1_loss=[Beta_vec[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
+#        L1_loss=[Beta_vec[i]*tf.reduce_mean(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
     elif mode=='node':
         L1_loss=[tf.reduce_sum(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
+#        L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
+
 
     return L1_loss
 
@@ -277,6 +280,8 @@ Beta_vec = build_betavec()
 
 L1_loss = build_L1loss()
 L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+#L2_loss = [tf.reduce_mean(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+
 
 cost = build_cost()
 
@@ -379,11 +384,16 @@ if condition==True:
             elif epoch+1 > beginAnneal:
                 lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr )  
             
+            # shuffle data in every epoch
+            shuffled_order=np.random.randint(0,np.shape(train_input)[0],np.shape(train_input)[0])
+            train_in = np.array([ train_input[i] for i in shuffled_order])
+            train_out = np.array([ train_output[i] for i in shuffled_order])
+            
             
             # Train at each mini batch    
             for batch in np.arange(total_batch):
-                batch_x = train_input[batch*batch_size:(batch+1)*batch_size]
-                batch_y = train_output[batch*batch_size:(batch+1)*batch_size]
+                batch_x = train_in[batch*batch_size:(batch+1)*batch_size]
+                batch_y = train_out[batch*batch_size:(batch+1)*batch_size]
                 
                 # Get cost and optimize the model
                 if autoencoder==True:
@@ -406,7 +416,7 @@ if condition==True:
                     beta_vec=[item for sublist in beta for item in sublist]
             
             if autoencoder==False:
-                train_err_epoch=sess.run(error,feed_dict={X:train_input, Y:train_output})
+                train_err_epoch=sess.run(error,feed_dict={X:train_in, Y:train_out})
                 plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
                 
                 test_err_epoch=sess.run(error,feed_dict={X:test_input, Y:test_output})
