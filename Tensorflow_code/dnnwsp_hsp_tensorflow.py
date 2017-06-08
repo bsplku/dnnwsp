@@ -7,29 +7,18 @@ from numpy import linalg as LA
 import scipy.io
 import os.path
 
+
+
 ################################################# Customization part #################################################
+
+from customizationGUI import mode, optimizer_algorithm, nodes, total_epoch, batch_size, beginAnneal, decay_rate, lr_init, min_lr,lr_beta, L2_param, max_beta, tg_hsp
+
+
 """
 autoencoder or not
 """
 autoencoder=False
 
-"""
-Select the sparsity control mode
-'layer' for layer wise sparsity control
-'node' for node wise sparsity control
-"""
-mode = 'layer'
-
-
-"""
-Select optimizer
-'Grad' for GradientDescentOptimizer
-'Ada' for AdagradOptimizer
-'Moment' for MomentumOptimizer
-'Adam' for AdamOptimizer
-'RMSP' for RMSPropOptimizer
-"""
-optimizer_algorithm='Grad'
 
 """
 Load your own data here
@@ -37,62 +26,6 @@ Load your own data here
 dataset = scipy.io.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_sample_data2.mat')
 
 
-""" 
-Set the number of nodes for input, output and each hidden layer here
-"""
-nodes=[74484,100,100,100,4]
-
-"""
-Set learning parameters
-"""
-# Set total epoch
-total_epoch=300
-# Set mini batch size
-batch_size=100
-# Let anealing to begin after **th epoch
-beginAnneal=100
-# anealing decay rate
-decay_rate=1e-4
-# Set initial learning rate and minimum                     
-lr_init = 1e-3    
-min_lr = 1e-4
-
-# Set learning rate of beta for weight sparsity control
-lr_beta = 0.02
-# Set L2 parameter for L2 regularization
-L2_param= 1e-5
-
-#
-## Set total epoch
-#total_epoch=500
-## Set mini batch size
-#batch_size=100
-## Let anealing to begin after **th epoch
-#beginAnneal=200
-## anealing decay rate
-#decay_rate=1e-4
-## Set initial learning rate and minimum                     
-#lr_init = 1e-3    
-#min_lr = 1e-4
-#
-## Set learning rate of beta for weight sparsity control
-#lr_beta = 0.015
-## Set L2 parameter for L2 regularization
-#L2_param= 1e-5
-
-
-
-"""
-Set maximum beta value of each hidden layer (usually 0.01~0.5) 
-and set target sparsness value (0:dense~1:sparse)
-"""
-
-max_beta = [0.05, 0.75, 0.7]
-tg_hsp = [0.5, 0.5, 0.5]
-
-
-#max_beta = [0.07, 0.7, 0.7]
-#tg_hsp = [0.7, 0.7, 0.7]
 
 ################################################# Input data part #################################################
 
@@ -175,11 +108,11 @@ def build_betavec():
 # Make L1 loss term and L2 loss term for regularisation
 def build_L1loss():
     if mode=='layer':
-        L1_loss=[Beta_vec[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
-#        L1_loss=[Beta_vec[i]*tf.reduce_mean(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
+#        L1_loss=[Beta_vec[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
+        L1_loss=[Beta_vec[i]*tf.reduce_mean(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
     elif mode=='node':
-        L1_loss=[tf.reduce_sum(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
-#        L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
+#        L1_loss=[tf.reduce_sum(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
+        L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
 
 
     return L1_loss
@@ -198,15 +131,15 @@ def build_cost():
 
 # Define optimizer
 def build_optimizer(Lr):
-    if optimizer_algorithm=='Grad':
+    if optimizer_algorithm=='GradientDescent':
         optimizer=tf.train.GradientDescentOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='Ada':
+    elif optimizer_algorithm=='Adagrad':
         optimizer=tf.train.AdagradOptimizer(Lr).minimize(cost) 
     elif optimizer_algorithm=='Adam':
         optimizer=tf.train.AdamOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='Moment':
+    elif optimizer_algorithm=='Momentum':
         optimizer=tf.train.MomentumOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='RMSP':
+    elif optimizer_algorithm=='RMSProp':
         optimizer=tf.train.RMSPropOptimizer(Lr).minimize(cost) 
 
     return optimizer
@@ -279,8 +212,8 @@ lr = lr_init
 Beta_vec = build_betavec()
 
 L1_loss = build_L1loss()
-L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
-#L2_loss = [tf.reduce_mean(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+#L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+L2_loss = [tf.reduce_mean(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
 
 
 cost = build_cost()
