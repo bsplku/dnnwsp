@@ -39,10 +39,6 @@ def get_value_ft():
     master.destroy()    
     return
     
-def close_window_ft():
-    master.destroy()
-    return
-
 
 master = Tk()
 master.title("Customization GUI")
@@ -124,8 +120,8 @@ e12.grid(row=13, column=1)
 e13.grid(row=14, column=1)
 
 
-ttk.Button(master, text='Done', command=get_value_ft).grid(row=15, column=0, padx=50, pady=10)
-ttk.Button(master, text='Quit', command=close_window_ft).grid(row=15, column=1, padx=0, pady=10)
+ttk.Button(master, text='Done', command=get_value_ft).grid(row=15, column=1, pady=10)
+
 
 master.mainloop()
 
