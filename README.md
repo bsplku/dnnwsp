@@ -2,10 +2,10 @@
 
 * DNN has been recently gained growing interest in neuroimaging data analysis. The challenge is, however, to address the so-called, ‘curse-of-dimensionality’ issue when the DNN is applied to neuroimaging data, in which an overfitting can be occurred when the limited number of samples and the high dimensional neuroimaging data are used to train the DNN. To tackle this issue and to increase the utility of DNN to the neuroimaging data analysis, an explicit control of DNN weights has been proposed and its efficacy has been shown for classification tasks using whole-brain functional connectivity and activation data [1, 2]. 
 
-* In this toobox, we provide Python-based software toolboxes of the method utilizing either Theano or TensorFlow library. 
+* In these Python-based software toolboxes using either Theano or TensorFlow library, we implemented our DNN method so that novice users to the DNN can try our model using our sample data and finally to adopt the method to their dataset. 
 
 # Sample data
-* We provide [fMRI sample data](bspl.korea.ac.kr/lhrhadvs_sample_data.mat) that were acquired during the four sensorimotor tasks inclduing lef-thand clecnhing, right-hand clecnhing, auditory attention, and visual stimulus tasks [2]. 
+* We prepared sample fMRI data (bspl.korea.ac.kr/lhrhadvs_sample_data.mat) that were acquired during the four sensorimotor tasks inclduing lef-thand clecnhing, right-hand clecnhing, auditory attention, and visual stimulus tasks [2]. 
 
 # Prerequisite
 * Python3.6 with libraries including the Theano and/or TensorFlow. 
