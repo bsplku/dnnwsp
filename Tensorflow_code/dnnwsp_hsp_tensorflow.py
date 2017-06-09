@@ -41,7 +41,7 @@ train_output = np.zeros((np.shape(dataset['train_y'])[0],np.max(dataset['train_y
 # trainsform classes into One-hot
 for i in np.arange(np.shape(dataset['train_y'])[0]):
     train_output[i][dataset['train_y'][i][0]]=1 
-dataset['train_y']
+
 
 # Split the dataset into test output
 test_output = np.zeros((np.shape(dataset['test_y'])[0],np.max(dataset['test_y'])+1))
@@ -251,9 +251,9 @@ elif (np.size(nodes)-2) != np.size(max_beta):
     print("Error : The number of hidden layers and max beta values don't match. ")
 elif (np.size(nodes)-2) != np.size(tg_hsp):
     print("Error : The number of hidden layers and target sparsity values don't match.")
-elif (autoencoder==False) & (np.shape(train_input)[0] != np.shape(train_output)[0]):
+elif (autoencoder==False) & (np.size(train_input,axis=0) != np.size(train_output,axis=0)):
     print("Error : The sizes of input train dataset and output train dataset don't match. ")  
-elif (autoencoder==False) & (np.shape(test_input)[0] != np.shape(test_output)[0]):
+elif (autoencoder==False) & (np.size(test_input,axis=0) != np.size(test_output,axis=0)):
     print("Error : The sizes of input test dataset and output test dataset don't match. ")     
 elif (np.any(np.array(tg_hsp)<0)) | (np.any(np.array(tg_hsp)>1)):  
     print("Error : The values of target sparsities are inappropriate.")
@@ -305,7 +305,6 @@ if condition==True:
                 
         beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err = initialization()
         
-               
 
         
            
@@ -356,10 +355,10 @@ if condition==True:
                     beta_vec=[item for sublist in beta for item in sublist]
             
             if autoencoder==False:
-                train_input_suff = np.array([ train_input[i] for i in sample_ids])
-                train_output_suff = np.array([ train_output[i] for i in sample_ids])
+                train_input_shuff = np.array([ train_input[i] for i in sample_ids])
+                train_output_shuff = np.array([ train_output[i] for i in sample_ids])
                 
-                train_err_epoch=sess.run(error,{X:train_input_suff, Y:train_output_suff})
+                train_err_epoch=sess.run(error,{X:train_input_shuff, Y:train_output_shuff})
                 plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
                 
                 test_err_epoch=sess.run(error,{X:test_input, Y:test_output})
@@ -415,21 +414,17 @@ if condition==True:
     plt.title("Cost plot",fontsize=16)
     plot_cost=plot_cost[1:]
     plt.plot(plot_cost)
+#    plt.yscale('log')
     plt.show()   
     
-#    # Plot the change of cost
-#    plt.title("Cost plot (log scale)",fontsize=16)
-#    plt.plot(plot_cost)
-#    plt.yscale('log')
-#    plt.show()     
-#    
-#    
+ 
     if autoencoder==False:       
-        # Plot test error
+        # Plot train & test error
         plt.title("Training & Test error",fontsize=16)
-        plot_test_err=plot_test_err[1:]
+        plot_train_err=plot_train_err[1:]
         plt.plot(plot_train_err)
         plt.hold
+        plot_test_err=plot_test_err[1:]
         plt.plot(plot_test_err)
         plt.ylim(0.0, 1.0)
         plt.legend(['Training error', 'Test error'],loc='upper right')

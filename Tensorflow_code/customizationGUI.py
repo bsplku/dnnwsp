@@ -96,16 +96,16 @@ e13 = ttk.Entry(master)
 # Insert the inital values at indices
 e2.current(0)                       # optimizer algorithm
 e3.insert(0,[74484,100,100,100,4]) # nodes
-e4.insert(0, 500)                  # total epoch
+e4.insert(0, 300)                  # total epoch
 e5.insert(0, 100)                  # batch size
-e6.insert(0, 200)                  # beginAnneal
-e7.insert(0, 1e-4)                 # decay rate
+e6.insert(0, 100)                  # beginAnneal
+e7.insert(0, 1e-3)                 # decay rate
 e8.insert(0, 1e-3)                 # initial learning rate
 e9.insert(0, 1e-4)                 # minimum learning rate
-e10.insert(0, 0.02)                # learning rate of beta
-e11.insert(0, 1e-5)                # L2 parameter
-e12.insert(0, [0.07, 0.7, 0.7])    # max beta
-e13.insert(0, [0.7, 0.7, 0.7])     # target hsp     
+e10.insert(0, 0.1)                # learning rate of beta
+e11.insert(0, 1e-3)                # L2 parameter
+e12.insert(0, [0.1, 0.7, 0.7])    # max beta
+e13.insert(0, [0.5, 0.5, 0.5])     # target hsp     
 
 # Position a widget in the parent widget in a grid. 
 e0.grid(row=1, column=1)
