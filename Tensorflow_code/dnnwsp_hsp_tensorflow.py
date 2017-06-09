@@ -241,25 +241,24 @@ if autoencoder==False:
 
 ############################################# Condition check part #############################################
 
-
 condition=False
 
 print()
 
-if np.shape(nodes)[0] <3:
-    print("Error : Not enough hidden layer number.")
+if np.size(nodes) <3:
+    print("Error : The number of total layers is not enough.")
+elif (np.size(nodes)-2) != np.size(max_beta):
+    print("Error : The number of hidden layers and max beta values don't match. ")
+elif (np.size(nodes)-2) != np.size(tg_hsp):
+    print("Error : The number of hidden layers and target sparsity values don't match.")
 elif (autoencoder==False) & (np.shape(train_input)[0] != np.shape(train_output)[0]):
     print("Error : The sizes of input train dataset and output train dataset don't match. ")  
 elif (autoencoder==False) & (np.shape(test_input)[0] != np.shape(test_output)[0]):
     print("Error : The sizes of input test dataset and output test dataset don't match. ")     
-elif not ((mode=='layer') | (mode=='node')):
-    print("Error : Select a valid mode. ") 
 elif (np.any(np.array(tg_hsp)<0)) | (np.any(np.array(tg_hsp)>1)):  
-    print("Error : Please set the target sparsities appropriately.")
+    print("Error : The values of target sparsities are inappropriate.")
 elif (autoencoder!=False) & (autoencoder!=True):
-    print("Error : Please set the autoencoder mode appropriately.")
-elif (autoencoder==True) & (np.shape(nodes)[0]>3) & (not all(x == nodes[::2][0] for x in nodes[::2])):
-    print("Error : The number of nodes in autoencoder is wrong.")
+    print("Error : Autoencoder mode is wrong.")
 else:
     condition=True
 
