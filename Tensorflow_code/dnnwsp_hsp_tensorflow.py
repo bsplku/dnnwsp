@@ -121,15 +121,21 @@ def build_L1loss():
 
 # Define cost term with cross entropy and L1 and L2 tetm     
 def build_cost():
-    if autoencoder==True:
-        cost=tf.reduce_mean(tf.pow(X - output_layer, 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
-    else:
+    if autoencoder==False:
+        # A softmax regression has two steps: 
+        # first we add up the evidence of our input being in certain classes, 
+        # and then we convert that evidence into probabilities.
         cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
-                                         + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)                                         
+                                         + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)   
+        
+    else:              
+        cost=tf.reduce_mean(tf.pow(X - output_layer, 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
+       
     return cost
 
 
 # Define optimizer
+# TensorFlow provides optimizers that slowly change each variable in order to minimize the loss function.
 def build_optimizer(Lr):
     if optimizer_algorithm=='GradientDescent':
         optimizer=tf.train.GradientDescentOptimizer(Lr).minimize(cost) 
@@ -263,7 +269,8 @@ else:
 
 if condition==True:
     
-    # make initializer        
+    # variables are not initialized when you call tf.Variable. 
+    # To initialize all the variables in a TensorFlow program, you must explicitly call a special operation         
     init = tf.global_variables_initializer()              
 
     
@@ -329,10 +336,11 @@ if condition==True:
                 batch_y = train_output[sample_ids[batch*batch_size:(batch+1)*batch_size]]
                 
                 # Get cost and optimize the model
-                if autoencoder==True:
-                    cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Beta_vec:beta_vec })
-                else:                   
-                    cost_batch,_=sess.run([cost,optimizer],feed_dict={Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
+                if autoencoder==False:
+                    cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
+                    
+                else:                      
+                    cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Beta_vec:beta_vec })
                     
                 cost_epoch+=cost_batch/total_batch      
         
@@ -352,10 +360,10 @@ if condition==True:
                 train_input_suff = np.array([ train_input[i] for i in sample_ids])
                 train_output_suff = np.array([ train_output[i] for i in sample_ids])
                 
-                train_err_epoch=sess.run(error,feed_dict={X:train_input_suff, Y:train_output_suff})
+                train_err_epoch=sess.run(error,{X:train_input_suff, Y:train_output_suff})
                 plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
                 
-                test_err_epoch=sess.run(error,feed_dict={X:test_input, Y:test_output})
+                test_err_epoch=sess.run(error,{X:test_input, Y:test_output})
                 plot_test_err=np.hstack([plot_test_err,[test_err_epoch]])
             
             
@@ -383,7 +391,7 @@ if condition==True:
 
         # Print final accuracy of test set
         if autoencoder==False:
-            print("Accuracy :",1-sess.run(error,feed_dict={X:test_input, Y:test_output}))
+            print("Accuracy :",1-sess.run(error,{X:test_input, Y:test_output}))
             
 else:
     # Don't run the sesstion but print 'failed' if any condition is unmet
