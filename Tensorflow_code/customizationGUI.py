@@ -90,19 +90,19 @@ e13 = ttk.Entry(master)
 
 
 
-e2['values'] = ('GradientDescent', 'Adagrad', 'Momentum','Adam','RMSProp')
-e2.current(0)
-e3.insert(10,[74484,100,100,100,4])
-e4.insert(10, 300)          
-e5.insert(10, 100)          
-e6.insert(10, 90)          
-e7.insert(10, 1e-4)          
-e8.insert(10, 1e-3)          
-e9.insert(10, 1e-4)          
-e10.insert(10, 0.02)          
-e11.insert(10, 1e-5)
-e12.insert(10, [0.05, 0.8, 0.8])  
-e13.insert(10, [0.7, 0.65, 0.65])           
+e2['values'] = ('GradientDescent', 'Adagrad', 'Momentum','Adam','RMSProp')  # optimizer algorithm
+e2.current(0)       
+e3.insert(10,[74484,100,100,100,4]) # nodes
+e4.insert(10, 500)                  # total epoch
+e5.insert(10, 100)                  # batch size
+e6.insert(10, 200)                  # beginAnneal
+e7.insert(10, 1e-4)                 # decay rate
+e8.insert(10, 1e-3)                 # initial learning rate
+e9.insert(10, 1e-4)                 # minimum learning rate
+e10.insert(10, 0.02)                # learning rate of beta
+e11.insert(10, 1e-5)                # L2 parameter
+e12.insert(10, [0.07, 0.7, 0.7])    # max beta
+e13.insert(10, [0.7, 0.7, 0.7])     # target hsp     
 
 e0.grid(row = 1, column = 1)
 e1.grid(row = 2, column = 1)
