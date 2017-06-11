@@ -9,6 +9,7 @@
 
 # Prerequisite
 * Python3.6 with libraries including the Theano and/or TensorFlow. 
+
   How to upgrade Python3.6 (Ubuntu): https://tecadmin.net/install-python-3-6-ubuntu-linuxmint/
 
 ## References 
