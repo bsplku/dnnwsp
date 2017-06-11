@@ -83,7 +83,7 @@ def RMSprop(cost, params, learning_rate, rho=0.9, epsilon=1e-6):
     return updates
 
 # Define Adaptive Moment Estimation for the gradient descent optimization(https://gist.github.com/skaae/ae7225263ca8806868cb)
-def adam(cost, params, learning_rate, b1=0.9, b2=0.999, e=1e-8, gamma=1-1e-8):
+def adam(cost, params, learning_rate, b1=0.99, b2=0.999, e=1e-8, gamma=1-1e-8):
     
     """
     ADAM update rules
@@ -225,8 +225,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              datasets='lhrhadvs_sample_data.mat',  # load data
              
              # activation:  # sigmoid function: T.nnet.sigmoid, hyperbolic tangent function: T.tanh, Rectified Linear Unit: relu1
-             batch_size = 100, n_epochs = 500, learning_rate=0.001,activation = T.tanh,
-             beginAnneal=200, min_annel_lrate = 1e-4, decay_rate = 1e-4, momentum_val=0.00,
+             batch_size = 40, n_epochs = 300, learning_rate=0.001,activation = T.tanh,
+             beginAnneal= 50, min_annel_lrate = 1e-4, decay_rate = 0.0005, momentum_val=0.01,
              
              # Select optimizer 'Grad' for GradientDescentOptimizer, 'Adam' for AdamOptimizer, 'Rmsp' for RMSPropOptimizer
              optimizer_algorithm='Grad',
@@ -234,12 +234,12 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              # Parameters for the node-wise control of weight sparsity
              # if you have three hidden layer, the number of target Hoyer's sparseness should be same 
              tg_hspset=[0.7, 0.5, 0.5], # Target sparsity
-             max_beta=[0.05, 0.9, 0.9], # Maximum beta changes
+             max_beta=[0.05, 0.7, 0.7], # Maximum beta changes
              
              # Parameters for the layer-wise control of weight sparsity 
              # tg_hspset=[0.7, 0.5, 0.5], # Target sparsity 
              # max_beta=[0.05, 0.8, 0.8], # Maximum beta changes
-             beta_lrates = 1e-2,        L2_reg = 1e-5,
+             beta_lrates = 1e-2,        L2_reg = 1e-4,
              
             # flag_nodewise =1 is the node-wise control of weight sparsity 
             # flag_nodewise =0 is the layer-wise control of weight sparsity
@@ -258,10 +258,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     # test_y  = 120 volumes x 1 [0:left-hand clenching task, 1:right-hand clenching task, 2:auditory task, 3:visual task]
     ############################################################
 
-    train_x = datasets['train_x']; 
-    train_y = datasets['train_y'];
-    test_x  = datasets['test_x'];
-    test_y  = datasets['test_y'];
+    train_x = datasets['train_x'];     train_y = datasets['train_y'];
+    test_x  = datasets['test_x'];    test_y  = datasets['test_y'];
     
     train_set_x = theano.shared(numpy.asarray(train_x, dtype=theano.config.floatX))
     train_set_y = T.cast(theano.shared(train_y.flatten(),borrow=True),'int32')
@@ -396,7 +394,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     while (epoch < n_epochs) and (not done_looping):
         epoch = epoch + 1
         minibatch_all_avg_error = []; minibatch_all_avg_mse = []
-
+        
         # minibatch based training
         for minibatch_index in range(n_train_batches):
             disply_text = StringIO();
@@ -435,7 +433,6 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         test_errors[epoch-1] = test_score*100
         train_mse[epoch-1] = np.mean(minibatch_all_avg_mse)
         test_mse[epoch-1] = np.mean(test_mses)
-        
         
         # Node-wise or layer-wise control of weight sparsity to display the current state of training 
         if flag_nodewise ==1:
