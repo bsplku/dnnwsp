@@ -1,12 +1,13 @@
 
 
-             PRNI 2017 Tutorial, 15:00 - 18:00, 22 June (Thursday), 2017
+             PRNI 2017 Tutorial, 13:00 - 17:00, 22 June (Thursday), 2017
 ====================================================================================
-Introduction of DNN with weight sparsity scheme                        15:00 - 15:20 
-ch01 - Installation of Theano, ch02 - Installation of TensorFlow       15:20 - 16:00
-Break                                                                  16:00 - 16:10
-ch03 - Explanation of sample data                                      16:10 - 16:15
-ch04 - Theano code                                                     16:15 - 17:00
-ch05 - TensorFlow code                                                 17:00 - 17:45
-Q&A                                                                    17:45 - 18:00
+Introduction of DNN with weight sparsity scheme                        13:00 - 13:20 
+ch01 - Installation of Theano, ch02 - Installation of TensorFlow       13:20 - 14:00
+Break                                                                  14:00 - 14:10
+ch03 - Explanation of sample data                                      14:10 - 14:30
+ch04 - Theano code                                                     14:30 - 15:30
+Break                                                                  15:30 - 15:40
+ch05 - TensorFlow code                                                 15:40 - 16:40
+Q&A                                                                    16:40 - 17:00
 =====================================================================================
