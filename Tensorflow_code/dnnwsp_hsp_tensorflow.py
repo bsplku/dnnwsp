@@ -19,8 +19,8 @@ import scipy.io as sio
 ################################################# Parameters #################################################
 
 from customizationGUI \
-        import mode, optimizer_algorithm, nodes, total_epoch, batch_size,\
-        beginAnneal, decay_rate, lr_init, min_lr,lr_beta, L2_reg, max_beta, tg_hsp
+        import mode, optimizer_algorithm, nodes, n_epochs, batch_size,\
+        beginAnneal, decay_rate, lr_init, lr_min, beta_lrates, L2_reg, max_beta, tg_hspset
     
 
 ################################################# Input data #################################################
@@ -196,7 +196,7 @@ cost = init_cost()
 optimizer=init_optimizer(Lr)
 
  
-correct_prediction=tf.equal(tf.argmax(logRegression_layer,1),tf.argmax(Y,1))  
+correct_prediction=tf.equal(tf.argmax(output_layer,1),tf.argmax(Y,1))  
 # calculate an average error depending on how frequent it classified correctly   
 error=1-tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
 
@@ -227,7 +227,7 @@ if mode=='layer':
         h=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
         
         # Update beta
-        b-=lr_beta*np.sign(h-tg)
+        b-=beta_lrates*np.sign(h-tg)
         
         # Trim value
         b=0.0 if b<0.0 else b
@@ -255,7 +255,7 @@ elif mode=='node':
         
         tg_vec = np.ones(dim)*tg
         # Update beta       
-        b_vec-=lr_beta*np.sign(h_vec-tg_vec)
+        b_vec-=beta_lrates*np.sign(h_vec-tg_vec)
         
         # Trim value
         b_vec[b_vec<0.0]=0.0
@@ -277,13 +277,13 @@ if np.size(nodes) <3:
     print("Error : The number of total layers is not enough.")
 elif (np.size(nodes)-2) != np.size(max_beta):
     print("Error : The number of hidden layers and max beta values don't match. ")
-elif (np.size(nodes)-2) != np.size(tg_hsp):
+elif (np.size(nodes)-2) != np.size(tg_hspset):
     print("Error : The number of hidden layers and target sparsity values don't match.")
 elif np.size(train_x,axis=0) != np.size(train_y,axis=0):
     print("Error : The sizes of input train datasets and output train datasets don't match. ")  
 elif np.size(test_x,axis=0) != np.size(test_y,axis=0):
     print("Error : The sizes of input test datasets and output test datasets don't match. ")     
-elif (np.any(np.array(tg_hsp)<0)) | (np.any(np.array(tg_hsp)>1)):  
+elif (np.any(np.array(tg_hspset)<0)) | (np.any(np.array(tg_hspset)>1)):  
     print("Error : The values of target sparsities are inappropriate.")
 else:
     condition=True
@@ -307,7 +307,7 @@ if condition==True:
         
 
         # Start training 
-        for epoch in np.arange(total_epoch):            
+        for epoch in np.arange(n_epochs):            
                    
             # Shuffle training data at the begining of each epoch           
             total_sample = np.size(train_x, axis=0)
@@ -322,7 +322,7 @@ if condition==True:
             if beginAnneal == 0:
                 lr = lr * 1.0
             elif epoch+1 > beginAnneal:
-                lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr )  
+                lr = max( lr_min, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr )  
             
         
             
@@ -346,12 +346,12 @@ if condition==True:
                 # weight sparsity control    
                 if mode=='layer':                   
                     for i in np.arange(np.shape(nodes)[0]-2):
-                        [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hsp[i])   
+                        [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hspset[i])   
                     beta=beta_val                      
 
                 elif mode=='node':                             
                     for i in np.arange(np.shape(nodes)[0]-2):
-                        [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hsp[i])   
+                        [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hspset[i])   
                     # flatten beta_val (shape (3, 100) -> (300,))
                     beta=[item for sublist in beta_val for item in sublist]
                

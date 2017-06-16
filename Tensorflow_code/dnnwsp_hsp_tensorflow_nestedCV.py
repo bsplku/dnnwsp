@@ -60,7 +60,7 @@ Set learning parameters
 k_folds=5
 
 # Set total epoch
-total_epoch=50
+n_epochs=50
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after **th epoch
@@ -69,10 +69,10 @@ beginAnneal=300
 decay_rate=1e-4
 # Set initial learning rate and minimum                     
 lr_init = 1e-3    
-min_lr = 1e-4
+lr_min = 1e-4
 
 # Set learning rate of beta for weight sparsity control
-lr_beta = 0.1
+beta_lrates = 0.1
 # Set L2 parameter for L2 regularization
 L2_reg= 1e-5
 
@@ -297,7 +297,7 @@ if mode=='layer':
         h=(np.sqrt(num_elements)-(L1/L2))/(np.sqrt(num_elements)-1)
         
         # Update beta
-        b-=lr_beta*np.sign(h-tg)
+        b-=beta_lrates*np.sign(h-tg)
         
         # Trim value
         b=0.0 if b<0.0 else b
@@ -325,7 +325,7 @@ elif mode=='node':
         h_vec=(np.sqrt(nodes)-(L1/L2))/(np.sqrt(nodes)-1)
         
         # Update beta
-        b_vec-=lr_beta*np.sign(h_vec-tg_vec)
+        b_vec-=beta_lrates*np.sign(h_vec-tg_vec)
         
         # Trim value
         b_vec[b_vec<0.0]=0.0
@@ -400,7 +400,7 @@ if condition==True:
             error_list=list() 
             
             # for each candidate sets
-            for tg_hsp in tg_hsp_cand:
+            for tg_hspset in tg_hsp_cand:
                 
                 
      
@@ -433,14 +433,14 @@ if condition==True:
                             
                    
                     # train and get cost    
-                    for epoch in np.arange(total_epoch):            
+                    for epoch in np.arange(n_epochs):            
                         
                         
                         # Begin Annealing
                         if beginAnneal == 0:
                             lr = lr * 1.0
                         elif epoch+1 > beginAnneal:
-                            lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr ) 
+                            lr = max( lr_min, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr ) 
                             
                             
                         # shuffle data in every epoch           
@@ -475,12 +475,12 @@ if condition==True:
                             # weight sparsity control    
                             if mode=='layer':                   
                                 for i in np.arange(np.shape(nodes)[0]-2):
-                                    [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hsp[i])   
+                                    [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hspset[i])   
                                 beta=beta_val                      
             
                             elif mode=='node':                             
                                 for i in np.arange(np.shape(nodes)[0]-2):
-                                    [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hsp[i])   
+                                    [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hspset[i])   
                                 # flatten beta_val (shape (3, 100) -> (300,))
                                 beta=[item for sublist in beta_val for item in sublist]
                         
@@ -523,7 +523,7 @@ if condition==True:
                         plt.legend(['Train error', 'Test error'],loc='upper right')
                         plt.show() 
                         
-                        print(">>>> (", np.argwhere([tg_hsp==i for i in tg_hsp_cand])[0][0]+1 ,") Target hsp",tg_hsp ,"<<<<")
+                        print(">>>> (", np.argwhere([tg_hspset==i for i in tg_hsp_cand])[0][0]+1 ,") Target hsp",tg_hspset ,"<<<<")
                         print("outer fold :",outer+1,"/",k_folds," &  inner fold :",np.argwhere(outer_train_list==inner)[0][0]+1,"/",k_folds-1)
                         err=sess.run(error,{X:valid_x, Y:valid_y})
                         print("Accuracy :","{:.3f}".format(1-err))
@@ -537,7 +537,7 @@ if condition==True:
                     
                     # make a new 'results' directory in the current directory
                     current_directory = os.getcwd()
-                    final_directory = os.path.join(current_directory, r'CVresults/outer%d/tg0_%d/inner%d'%(outer+1,tg_hsp*10,inner+1))
+                    final_directory = os.path.join(current_directory, r'CVresults/outer%d/tg0_%d/inner%d'%(outer+1,tg_hspset*10,inner+1))
                     if not os.path.exists(final_directory):
                         os.makedirs(final_directory) 
                         
@@ -557,7 +557,7 @@ if condition==True:
                 error_list.append(avg_err)
                 print("")
                 print("##############################################################################")
-                print("# Avg validation error on this iteration for (", np.argwhere([tg_hsp==i for i in tg_hsp_cand])[0][0]+1 ,")",tg_hsp,"is" ,"{:.4f}".format(avg_err),"#")
+                print("# Avg validation error on this iteration for (", np.argwhere([tg_hspset==i for i in tg_hsp_cand])[0][0]+1 ,")",tg_hspset,"is" ,"{:.4f}".format(avg_err),"#")
                 print("##############################################################################")
                 print("")
                 
@@ -591,14 +591,14 @@ if condition==True:
              
             
             # train and get cost    
-            for epoch in np.arange(total_epoch):            
+            for epoch in np.arange(n_epochs):            
                 
                 
                 # Begin Annealing
                 if beginAnneal == 0:
                     lr = lr * 1.0
                 elif epoch+1 > beginAnneal:
-                    lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr ) 
+                    lr = max( lr_min, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr ) 
                     
                 # Shuffle training data at the begining of each epoch           
                 total_sample = np.size(train_x, axis=0)
