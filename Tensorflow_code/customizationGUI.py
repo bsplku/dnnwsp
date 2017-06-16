@@ -18,7 +18,7 @@ def get_value_ft():
     global lr_init
     global min_lr
     global lr_beta
-    global L2_param
+    global L2_reg
     global max_beta
     global tg_hsp
     
@@ -32,7 +32,7 @@ def get_value_ft():
     lr_init=float(e8.get())
     min_lr=float(e9.get())
     lr_beta=float(e10.get())
-    L2_param=float(e11.get())
+    L2_reg=float(e11.get())
     max_beta=[float(i) for i in e12.get().split(' ')]
     tg_hsp=[float(i) for i in e13.get().split(' ')]
     
@@ -70,7 +70,7 @@ ttk.Label(master, text="Decay rate").grid(row=8)
 ttk.Label(master, text="Initial learning rate").grid(row=9)
 ttk.Label(master, text="Minimum learning rate").grid(row=10)
 ttk.Label(master, text="Beta learning rate").grid(row=11)
-ttk.Label(master, text="L2 parameter").grid(row=12)
+ttk.Label(master, text="L2 regularization parameter").grid(row=12)
 ttk.Label(master, text="Max beta").grid(row=13)
 ttk.Label(master, text="Target hsp").grid(row=14)
 

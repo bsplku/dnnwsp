@@ -1,58 +1,59 @@
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
+################################################# Import #################################################
+
+# This import statement gives Python access to all of TensorFlow's classes, methods, and symbols. 
 import tensorflow as tf
+# NumPy is the fundamental package for scientific computing with Python.
 import numpy as np
+# Linear algebra module for calculating L1 and L2 norm  
 from numpy import linalg as LA
-import scipy.io
+# To plot the results
+import matplotlib.pyplot as plt
+# To check the directory when saving the results
 import os.path
+# The module for file input and output
+import scipy.io as sio
+
+
+################################################# Parameters #################################################
+
+from customizationGUI \
+        import mode, optimizer_algorithm, nodes, total_epoch, batch_size,\
+        beginAnneal, decay_rate, lr_init, min_lr,lr_beta, L2_reg, max_beta, tg_hsp
+    
+
+################################################# Input data #################################################
+
+################ lhrhadvs_sample_data.mat ##################
+# train_x  = 240 volumes x 74484 voxels  
+# train_x  = 240 volumes x 1 [0:left-hand clenching task, 1:right-hand clenching task, 2:auditory task, 3:visual task]
+# test_x  = 120 volumes x 74484 voxels
+# test_y  = 120 volumes x 1 [0:left-hand clenching task, 1:right-hand clenching task, 2:auditory task, 3:visual task]
+############################################################
+
+datasets = sio.loadmat('lhrhadvs_sample_data.mat')
 
 
 
-################################################# Customization part #################################################
-
-from customizationGUI import mode, optimizer_algorithm, nodes, total_epoch, batch_size, beginAnneal, decay_rate, lr_init, min_lr,lr_beta, L2_param, max_beta, tg_hsp
-
-
-"""
-autoencoder or not
-"""
-autoencoder=False
-
-
-"""
-Load your own data here
-"""
-dataset = scipy.io.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_sample_data2.mat')
-
-
-
-################################################# Input data part #################################################
-
-# Split the dataset into traning input
-train_input = dataset['train_x']
-# Split the dataset into test input
-test_input = dataset['test_x']
-
-
-
-# Split the dataset into traning output 
-train_output = np.zeros((np.shape(dataset['train_y'])[0],np.max(dataset['train_y'])+1))
+train_x = datasets['train_x']
+train_y = np.zeros((np.shape(datasets['train_y'])[0],np.max(datasets['train_y'])+1))
 # trainsform classes into One-hot
-for i in np.arange(np.shape(dataset['train_y'])[0]):
-    train_output[i][dataset['train_y'][i][0]]=1 
+for i in np.arange(np.shape(datasets['train_y'])[0]):
+    train_y[i][datasets['train_y'][i][0]]=1 
+datasets['train_y']
 
 
-# Split the dataset into test output
-test_output = np.zeros((np.shape(dataset['test_y'])[0],np.max(dataset['test_y'])+1))
+
+test_x = datasets['test_x']
+
+test_y = np.zeros((np.shape(datasets['test_y'])[0],np.max(datasets['test_y'])+1))
 # trainsform classes into One-hot
-for i in np.arange(np.shape(dataset['test_y'])[0]):
-    test_output[i][dataset['test_y'][i][0]]=1 
+for i in np.arange(np.shape(datasets['test_y'])[0]):
+    test_y[i][datasets['test_y'][i][0]]=1 
 
 
-
-
-################################################# Structure part #################################################
+################################################# Build Model #################################################
 
 
 
@@ -91,7 +92,7 @@ logRegression_layer=tf.nn.tanh(output_layer)
 
 
 
-############################################# Learning part #############################################
+############################################# Function Definition #############################################
 
 
 
@@ -108,10 +109,8 @@ def build_betavec():
 # Make L1 loss term and L2 loss term for regularisation
 def build_L1loss():
     if mode=='layer':
-#        L1_loss=[Beta_vec[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
-        L1_loss=[Beta_vec[i]*tf.reduce_mean(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
+        L1_loss=[Beta_vec[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
     elif mode=='node':
-#        L1_loss=[tf.reduce_sum(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
         L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
 
 
@@ -121,20 +120,17 @@ def build_L1loss():
 
 # Define cost term with cross entropy and L1 and L2 tetm     
 def build_cost():
-    if autoencoder==False:
-        # A softmax regression has two steps: 
-        # first we add up the evidence of our input being in certain classes, 
-        # and then we convert that evidence into probabilities.
-        cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
-                                         + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)   
-        
-    else:              
-        cost=tf.reduce_mean(tf.pow(X - output_layer, 2)) + tf.reduce_sum(L1_loss) + L2_param*tf.reduce_sum(L2_loss)
-       
+
+    # A softmax regression has two steps: 
+    # first we add up the evidence of our input being in certain classes, 
+    # and then we convert that evidence into probabilities.
+    cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
+                                     + tf.reduce_sum(L1_loss) + L2_reg*tf.reduce_sum(L2_loss)   
+    
+  
     return cost
 
 
-# Define optimizer
 # TensorFlow provides optimizers that slowly change each variable in order to minimize the loss function.
 def build_optimizer(Lr):
     if optimizer_algorithm=='GradientDescent':
@@ -161,6 +157,7 @@ if mode=='layer':
         [nodes,dim]=W.shape  
         num_elements=nodes*dim
  
+        # vectorize weight matrix 
         Wvec=W.flatten()
         
         # Calculate L1 and L2 norm     
@@ -218,8 +215,7 @@ lr = lr_init
 Beta_vec = build_betavec()
 
 L1_loss = build_L1loss()
-#L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
-L2_loss = [tf.reduce_mean(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
 
 
 cost = build_cost()
@@ -230,16 +226,15 @@ Lr=tf.placeholder(tf.float32)
 optimizer=build_optimizer(Lr)
   
 
-if autoencoder==False:
-    correct_prediction=tf.equal(tf.argmax(output_layer,1),tf.argmax(Y,1))  
-        
-    # calculate mean error(accuracy) depending on the frequency it predicts correctly   
-    error=1-tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
+correct_prediction=tf.equal(tf.argmax(output_layer,1),tf.argmax(Y,1))  
+    
+# calculate mean error(accuracy) depending on the frequency it predicts correctly   
+error=1-tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
 
 
 
 
-############################################# Condition check part #############################################
+############################################# Condition check #############################################
 
 condition=False
 
@@ -251,19 +246,17 @@ elif (np.size(nodes)-2) != np.size(max_beta):
     print("Error : The number of hidden layers and max beta values don't match. ")
 elif (np.size(nodes)-2) != np.size(tg_hsp):
     print("Error : The number of hidden layers and target sparsity values don't match.")
-elif (autoencoder==False) & (np.size(train_input,axis=0) != np.size(train_output,axis=0)):
-    print("Error : The sizes of input train dataset and output train dataset don't match. ")  
-elif (autoencoder==False) & (np.size(test_input,axis=0) != np.size(test_output,axis=0)):
-    print("Error : The sizes of input test dataset and output test dataset don't match. ")     
+elif np.size(train_x,axis=0) != np.size(train_y,axis=0):
+    print("Error : The sizes of input train datasets and output train datasets don't match. ")  
+elif np.size(test_x,axis=0) != np.size(test_y,axis=0):
+    print("Error : The sizes of input test datasets and output test datasets don't match. ")     
 elif (np.any(np.array(tg_hsp)<0)) | (np.any(np.array(tg_hsp)>1)):  
     print("Error : The values of target sparsities are inappropriate.")
-elif (autoencoder!=False) & (autoencoder!=True):
-    print("Error : Autoencoder mode is wrong.")
 else:
     condition=True
 
 
-################################################ Training & test part ################################################
+################################################ Learning ################################################
 
 
 if condition==True:
@@ -309,7 +302,7 @@ if condition==True:
         
            
         # Calculate how many mini-batch iterations
-        total_batch=int(np.shape(train_input)[0]/batch_size) 
+        total_batch=int(np.shape(train_x)[0]/batch_size) 
                
         # train and get cost
         cost_avg=0.0
@@ -323,23 +316,19 @@ if condition==True:
                 lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr )  
             
             # shuffle data in every epoch           
-            total_sample = np.size(train_input, axis=0)
+            total_sample = np.size(train_x, axis=0)
             sample_ids = np.arange(total_sample)
             np.random.shuffle(sample_ids) 
 
         
             # Train at each mini batch    
             for batch in np.arange(total_batch):
-                batch_x = train_input[sample_ids[batch*batch_size:(batch+1)*batch_size]]
-                batch_y = train_output[sample_ids[batch*batch_size:(batch+1)*batch_size]]
+                batch_x = train_x[sample_ids[batch*batch_size:(batch+1)*batch_size]]
+                batch_y = train_y[sample_ids[batch*batch_size:(batch+1)*batch_size]]
                 
                 # Get cost and optimize the model
-                if autoencoder==False:
-                    cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
-                    
-                else:                      
-                    cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Beta_vec:beta_vec })
-                    
+                cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
+
                 cost_epoch+=cost_batch/total_batch      
         
                 
@@ -354,15 +343,15 @@ if condition==True:
                 elif mode=='node':                              
                     beta_vec=[item for sublist in beta for item in sublist]
             
-            if autoencoder==False:
-                train_input_shuff = np.array([ train_input[i] for i in sample_ids])
-                train_output_shuff = np.array([ train_output[i] for i in sample_ids])
-                
-                train_err_epoch=sess.run(error,{X:train_input_shuff, Y:train_output_shuff})
-                plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
-                
-                test_err_epoch=sess.run(error,{X:test_input, Y:test_output})
-                plot_test_err=np.hstack([plot_test_err,[test_err_epoch]])
+
+            train_input_shuff = np.array([ train_x[i] for i in sample_ids])
+            train_output_shuff = np.array([ train_y[i] for i in sample_ids])
+            
+            train_err_epoch=sess.run(error,{X:train_input_shuff, Y:train_output_shuff})
+            plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
+            
+            test_err_epoch=sess.run(error,{X:test_x, Y:test_y})
+            plot_test_err=np.hstack([plot_test_err,[test_err_epoch]])
             
             
             # make space to plot beta, sparsity level
@@ -388,8 +377,7 @@ if condition==True:
 
 
         # Print final accuracy of test set
-        if autoencoder==False:
-            print("Accuracy :",1-sess.run(error,{X:test_input, Y:test_output}))
+        print("Accuracy :",1-sess.run(error,{X:test_x, Y:test_y}))
             
 else:
     # Don't run the sesstion but print 'failed' if any condition is unmet
@@ -397,7 +385,7 @@ else:
      
     
     
-################################################ Plot & save results part ################################################
+################################################ Plot & save results ################################################
 
 
 
@@ -418,19 +406,19 @@ if condition==True:
     plt.show()   
     
  
-    if autoencoder==False:       
-        # Plot train & test error
-        plt.title("Training & Test error",fontsize=16)
-        plot_train_err=plot_train_err[1:]
-        plt.plot(plot_train_err)
-        plt.hold
-        plot_test_err=plot_test_err[1:]
-        plt.plot(plot_test_err)
-        plt.ylim(0.0, 1.0)
-        plt.legend(['Training error', 'Test error'],loc='upper right')
-    #    plt.yscale('log')
-        plt.show() 
-    
+  
+    # Plot train & test error
+    plt.title("Training & Test error",fontsize=16)
+    plot_train_err=plot_train_err[1:]
+    plt.plot(plot_train_err)
+    plt.hold
+    plot_test_err=plot_test_err[1:]
+    plt.plot(plot_test_err)
+    plt.ylim(0.0, 1.0)
+    plt.legend(['Training error', 'Test error'],loc='upper right')
+#    plt.yscale('log')
+    plt.show() 
+
 
  
     
@@ -464,12 +452,12 @@ if condition==True:
         os.makedirs(final_directory) 
         
     # save results as .mat file
-    scipy.io.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
-    scipy.io.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
-    scipy.io.savemat("results/result_train_err.mat", mdict={'trainErr': plot_train_err})
-    scipy.io.savemat("results/result_test_err.mat", mdict={'testErr': plot_test_err})
-    scipy.io.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
-    scipy.io.savemat("results/result_hsp.mat", mdict={'hsp': plot_hsp})
+    sio.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
+    sio.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
+    sio.savemat("results/result_train_err.mat", mdict={'trainErr': plot_train_err})
+    sio.savemat("results/result_test_err.mat", mdict={'testErr': plot_test_err})
+    sio.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
+    sio.savemat("results/result_hsp.mat", mdict={'hsp': plot_hsp})
 
 else:
     None 
