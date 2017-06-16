@@ -8,6 +8,8 @@ modified from the DeepLearningTutorials (https://github.com/lisa-lab/DeepLearnin
 to apply a node-wise and layer-wise control of weight sparsity via Hoyer sparseness. 
 """
 
+
+################################################# Import #################################################
 import os.path
 import sys
 import timeit
@@ -27,6 +29,8 @@ except ImportError:
         from io import StringIO
 
 from numpy import linalg as LA
+
+########################################## Function definition #################################################
 
 # Define the node-wise or layer-wise control of weight sparsity via Hoyer sparseness
 # (Hoyer, 2014, Kim and Lee PRNI2016, Kim and Lee ICASSP 2017)
@@ -115,6 +119,8 @@ def adam(cost, params, learning_rate, b1=0.99, b2=0.999, e=1e-8, gamma=1-1e-8):
         updates.append((theta_previous, theta) )
     updates.append((t, t + 1.))
     return updates
+
+########################################## Class definition #################################################
 
 class HiddenLayer(object):
     
@@ -221,6 +227,8 @@ class MLP(object):
         # keep track of model input
         self.input = input
         
+########################################## Parameters of dnnwsp #################################################
+        
 def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              datasets='lhrhadvs_sample_data.mat',  # load data
              
@@ -248,7 +256,10 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              # Save path  
              sav_path = '/home/khc/workspace/prni2017',  
               ):
-                                
+               
+    ########################################## Input data  #################################################
+
+        
     datasets=sio.loadmat(datasets) # load datasets
     
     ############# lhrhadvs_sample_data.mat #############
@@ -271,9 +282,9 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     n_train_batches = int(train_set_x.get_value(borrow=True).shape[0] / batch_size)
     n_test_batches = int(test_set_x.get_value(borrow=True).shape[0] / batch_size)
 
-    #####################
-    # BUILD A MODEL #
-    ######################
+                   
+    ########################################## Build model #################################################
+
     print('... building the model')
 
     # allocate symbolic variables for the data
@@ -355,9 +366,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         on_unused_input = 'ignore'
     )
 
-    ###############
-    # TRAIN MODEL #
-    ###############
+    ########################################## Learning model #################################################
+
     print('... training')
 
     test_score = 0. 
@@ -459,6 +469,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         disply_text.close()
         
         lrs[epoch-1] = learning_rate
+
+    ########################################## Save variables #################################################
 
     # make a new directory to save data
     if not os.path.exists(sav_path):
