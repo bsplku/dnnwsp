@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import os.path
 # The module for file input and output
 import scipy.io as sio
-
+import itertools
 ################################################# Customization part #################################################
 
 """
@@ -47,6 +47,7 @@ Select optimizer
 """
 optimizer_algorithm='Adam'
 
+momentum=0.5
 
 """ 
 Set the number of nodes for input, output and each hidden layer here
@@ -60,11 +61,11 @@ Set learning parameters
 k_folds=5
 
 # Set total epoch
-n_epochs=50
+n_epochs=100
 # Set mini batch size
 batch_size=100
 # Let anealing to begin after **th epoch
-beginAnneal=300
+beginAnneal=80
 # anealing decay rate
 decay_rate=1e-4
 # Set initial learning rate and minimum                     
@@ -82,13 +83,13 @@ Set maximum beta value of each hidden layer (usually 0.01~0.5)
 and set target sparsness value (0:dense~1:sparse)
 """
 
-max_beta = [0.05, 0.75, 0.7]
+max_beta = [0.1, 0.6, 0.6]
 
 
-
-tg_hsp_cand=[ [0.5, 0.5, 0.5] , [0.3, 0.5, 0.3] , [0.5, 0.5, 0.3] , [0.5, 0.7, 0.7] , [0.7 , 0.5 , 0.7] , [0.7 , 0.7 , 0.7]]
-
-
+tg_hspset_list=[[0.3,0.5,0.7],[0.5,0.5,0.7]]
+#tg_hspset_list = list(itertools.product([0.3,0.5,0.7],[0.5,0.7],[0.5,0.7]))
+#tg_hspset_list=[list(i) for i in tg_hspset_list]
+n_tg_hspset_list = len(tg_hspset_list)
 
 ################################################# Input data #################################################
 
@@ -176,7 +177,7 @@ def init_L1loss():
         L1_loss=[Beta[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
     elif mode=='node':
         # Get L1 loss term by multiplying beta(vector values as many as nodes) and L1 norm of weight for each layer
-        L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
+        L1_loss=[tf.reduce_sum(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
         
     L1_loss_total=tf.reduce_sum(L1_loss)
 
@@ -218,7 +219,7 @@ def init_optimizer(Lr):
     elif optimizer_algorithm=='Adam':
         optimizer=tf.train.AdamOptimizer(Lr).minimize(cost) 
     elif optimizer_algorithm=='Momentum':
-        optimizer=tf.train.MomentumOptimizer(Lr).minimize(cost) 
+        optimizer=tf.train.MomentumOptimizer(Lr,momentum).minimize(cost) 
     elif optimizer_algorithm=='RMSProp':
         optimizer=tf.train.RMSPropOptimizer(Lr).minimize(cost) 
 
@@ -349,7 +350,7 @@ if np.size(nodes) <3:
     print("Error : The number of total layers is not enough.")
 elif (np.size(nodes)-2) != np.size(max_beta):
     print("Error : The number of hidden layers and max beta values don't match. ")
-elif (np.size(nodes)-2) != np.size(tg_hsp_cand,axis=1):
+elif (np.size(nodes)-2) != np.size(tg_hspset_list,axis=1):
     print("Error : The number of hidden layers and target sparsity values don't match.")
 elif (autoencoder==False) & (np.size(train_x_,axis=0) != np.size(train_y_,axis=0)):
     print("Error : The sizes of input train datasets and output train datasets don't match. ")  
@@ -400,7 +401,7 @@ if condition==True:
             error_list=list() 
             
             # for each candidate sets
-            for tg_hspset in tg_hsp_cand:
+            for tg_hspset in tg_hspset_list:
                 
                 
      
@@ -512,32 +513,37 @@ if condition==True:
                  
                     # Print final accuracy of test set
                     if autoencoder==False:       
-                        # Plot train & test error
-                        plt.title("Train & Test error plot",fontsize=16)
-                        plot_train_err=plot_train_err[1:]
-                        plt.plot(plot_train_err)
-                        plt.hold
-                        plot_test_err=plot_test_err[1:]
-                        plt.plot(plot_test_err)
-                        plt.ylim(0.0, 1.0)
-                        plt.legend(['Train error', 'Test error'],loc='upper right')
-                        plt.show() 
+#                        # Plot train & test error
+#                        plt.figure() 
+#                        plt.title("Train & Test error plot",fontsize=16)
+#                        plot_train_err=plot_train_err[1:]
+#                        plt.plot(plot_train_err)
+#                        plt.hold
+#                        plot_test_err=plot_test_err[1:]
+#                        plt.plot(plot_test_err)
+#                        plt.ylim(0.0, 1.0)
+#                        plt.legend(['Train error', 'Test error'],loc='upper right')
+#                        plt.show(block=False) 
                         
-                        print(">>>> (", np.argwhere([tg_hspset==i for i in tg_hsp_cand])[0][0]+1 ,") Target hsp",tg_hspset ,"<<<<")
+                        print(">>>> (", np.argwhere([tg_hspset==i for i in tg_hspset_list])[0][0]+1 ,") Target hsp",tg_hspset ,"<<<<")
                         print("outer fold :",outer+1,"/",k_folds," &  inner fold :",np.argwhere(outer_train_list==inner)[0][0]+1,"/",k_folds-1)
                         err=sess.run(error,{X:valid_x, Y:valid_y})
                         print("Accuracy :","{:.3f}".format(1-err))
                         
-                    print("Mean beta :",np.mean(np.mean(plot_beta,axis=1),axis=1))
-                    print("Mean hsp :",np.mean(np.mean(plot_hsp,axis=1),axis=1))
-                    print(" ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~")
+                    print("beta :",np.mean(np.mean(plot_beta,axis=1),axis=1), " / hsp :",np.mean(np.mean(plot_hsp,axis=1),axis=1))
+                    print(" ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~")
                         
                     avg_err+=err/np.size(outer_train_list)
                     
                     
+                    
+                    # make a new 'results' directory in the current directory
+                    tghsp=['0'+str(int(i*10)) for i in tg_hspset]
+                    tghsp=''.join(tghsp)
+                    
                     # make a new 'results' directory in the current directory
                     current_directory = os.getcwd()
-                    final_directory = os.path.join(current_directory, r'CVresults/outer%d/tg0_%d/inner%d'%(outer+1,tg_hspset*10,inner+1))
+                    final_directory = os.path.join(current_directory, r'CVresults/outer%d/tg_%s/inner%d'%(outer+1,tghsp,inner+1))
                     if not os.path.exists(final_directory):
                         os.makedirs(final_directory) 
                         
@@ -557,14 +563,14 @@ if condition==True:
                 error_list.append(avg_err)
                 print("")
                 print("##############################################################################")
-                print("# Avg validation error on this iteration for (", np.argwhere([tg_hspset==i for i in tg_hsp_cand])[0][0]+1 ,")",tg_hspset,"is" ,"{:.4f}".format(avg_err),"#")
+                print("# Avg validation error on this iteration for (", np.argwhere([tg_hspset==i for i in tg_hspset_list])[0][0]+1 ,")",tg_hspset,"is" ,"{:.4f}".format(avg_err),"#")
                 print("##############################################################################")
                 print("")
                 
             # select target sparsity set when validation error is min
             where_is_best=np.argmin(error_list)
             # store selected set in a list
-            tg_hsp_selected_list.append(tg_hsp_cand[where_is_best])
+            tg_hsp_selected_list.append(tg_hspset_list[where_is_best])
             
         
             ######################################## Outer train ################################################ 
@@ -678,21 +684,36 @@ if condition==True:
            
             
             # Print final accuracy of test set
-            if autoencoder==False:         
+            if autoencoder==False: 
+                
+                # make a new 'results' directory in the current directory
+                selectedhsp=['0'+str(int(i*10)) for i in tg_hsp_selected_list[-1]]
+                selectedhsp=''.join(selectedhsp)
+                
+                current_directory = os.getcwd()
+                final_directory = os.path.join(current_directory, r'CVresults/selected_outer%d_%s'%(outer+1,selectedhsp))
+                if not os.path.exists(final_directory):
+                    os.makedirs(final_directory) 
+                    
                 # Plot the change of learning rate
+                plt.figure() 
                 plt.title("Learning rate plot",fontsize=16)
                 plot_lr=plot_lr[1:]
                 plt.ylim(0.0, lr_init*1.2)
                 plt.plot(plot_lr)
-                plt.show()
+                plt.savefig(final_directory+'/learning_rate.png')
+                plt.show(block=False)
                 
                 # Plot the change of cost
+                plt.figure() 
                 plt.title("Cost plot",fontsize=16)
                 plot_cost=plot_cost[1:]
                 plt.plot(plot_cost)
-                plt.show()   
-              
+                plt.savefig(final_directory+'/cost.png')
+                plt.show(block=False)   
+
                 # Plot train & test error
+                plt.figure() 
                 plt.title("Training & Test error",fontsize=16)
                 plot_train_err=plot_train_err[1:]
                 plt.plot(plot_train_err)
@@ -701,7 +722,8 @@ if condition==True:
                 plt.plot(plot_test_err)
                 plt.ylim(0.0, 1.0)
                 plt.legend(['Training error', 'Test error'],loc='upper right')
-                plt.show() 
+                plt.savefig(final_directory+'/error.png')
+                plt.show(block=False) 
                 
                 err=sess.run(error,{X:test_x, Y:test_y})
                 fianl_accuracy_list.append(1-err)
@@ -709,38 +731,35 @@ if condition==True:
         
  
             # Plot the change of beta value
-            print("")       
+            print("")   
+            plt.figure() 
             for i in np.arange(np.shape(nodes)[0]-2):
                 print("")
                 plt.title("Beta plot \n Hidden layer %d"%(i+1),fontsize=16)
                 plot_beta[i]=plot_beta[i][1:]
                 plt.plot(plot_beta[i])
                 plt.ylim(0.0, np.max(max_beta)*1.2)
-                plt.show()
+                plt.savefig(final_directory+'/beta%d.png'%(i+1))
+                plt.show(block=False)
             
             
             # Plot the change of Hoyer's sparsity
-            print("")            
+            print("")    
+            plt.figure() 
             for i in np.arange(np.shape(nodes)[0]-2):
                 print("")
                 plt.title("Hoyer's sparsity plot \n Hidden layer %d"%(i+1),fontsize=16)
                 plot_hsp[i]=plot_hsp[i][1:]
                 plt.plot(plot_hsp[i])
                 plt.ylim(0.0, 1.0)
-                plt.show()
+                plt.savefig(final_directory+'/hsp%d.png'%(i+1))
+                plt.show(block=False)
                         
                 
             sess.run(init)
             lr, beta_val, beta, hsp_val, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err = init_otherVariables()
             
-            # make a new 'results' directory in the current directory
-            filename=['0'+str(int(i*10)) for i in tg_hsp_selected_list[-1]]
-            filename=''.join(filename)
             
-            current_directory = os.getcwd()
-            final_directory = os.path.join(current_directory, r'CVresults/outer%d/selected_tg_%s'%(outer+1,filename))
-            if not os.path.exists(final_directory):
-                os.makedirs(final_directory) 
                 
             # save results as .mat file
             sio.savemat(final_directory+"/result_learningrate.mat", mdict={'lr': plot_lr})

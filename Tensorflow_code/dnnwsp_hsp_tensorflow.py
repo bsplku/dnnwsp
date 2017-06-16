@@ -19,7 +19,7 @@ import scipy.io as sio
 ################################################# Parameters #################################################
 
 from customizationGUI \
-        import mode, optimizer_algorithm, nodes, n_epochs, batch_size,\
+        import mode, optimizer_algorithm, momtentum, nodes, n_epochs, batch_size,\
         beginAnneal, decay_rate, lr_init, lr_min, beta_lrates, L2_reg, max_beta, tg_hspset
     
 
@@ -85,7 +85,7 @@ logRegression_layer=tf.nn.tanh(output_layer)
                     
 
 
-############################################# Function Definition #############################################
+############################################# Variables declaration #############################################
 
 
 # Make placeholders for total beta array (make a long one to concatenate every beta vector) 
@@ -101,26 +101,26 @@ def init_beta():
 
 
 # Make L1 loss term for regularization
-def init_L1loss():
+def init_L1():
     if mode=='layer':
         # Get L1 loss term by simply multiplying beta(scalar value) and L1 norm of weight for each layer
-        L1_loss=[Beta[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
+        L1=[Beta[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
     elif mode=='node':
         # Get L1 loss term by multiplying beta(vector values as many as nodes) and L1 norm of weight for each layer
-        L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
+        L1=[tf.reduce_sum(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
         
-    L1_loss_total=tf.reduce_sum(L1_loss)
+#    L1_total=tf.reduce_sum(L1)
 
-    return L1_loss_total
+    return L1
 
 
 # Make L2 loss term for regularization
-def init_L2loss():
-    L2_loss=[tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+def init_L2():
+    L2=[tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
     
-    L2_loss_total=L2_reg*tf.reduce_sum(L2_loss) 
+#    L2_total=L2_reg*tf.reduce_sum(L2) 
     
-    return L2_loss_total
+    return L2
 
 
        
@@ -130,7 +130,7 @@ def init_cost():
 
     # A softmax regression : it adds up the evidence of our input being in certain classes, and converts that evidence into probabilities.
     cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
-                                     + L1_loss_total + L2_loss_total 
+                                     + tf.reduce_sum(L1) + L2_reg*tf.reduce_sum(L2) 
     
     return cost
 
@@ -189,8 +189,8 @@ Lr=tf.placeholder(tf.float32)
 
 
 Beta = init_beta()
-L1_loss_total = init_L1loss()
-L2_loss_total = init_L2loss()
+L1 = init_L1()
+L2 = init_L2()
 cost = init_cost()
 
 optimizer=init_optimizer(Lr)
@@ -220,11 +220,11 @@ if mode=='layer':
         sqrt_nsamps=np.sqrt(Wvec.shape[0])
         
         # Calculate L1 and L2 norm     
-        L1=LA.norm(Wvec,1)
-        L2=LA.norm(Wvec,2)
+        L1norm=LA.norm(Wvec,1)
+        L2norm=LA.norm(Wvec,2)
         
         # Calculate hoyer's sparsness
-        h=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
+        h=(sqrt_nsamps-(L1norm/L2norm))/(sqrt_nsamps-1)
         
         # Update beta
         b-=beta_lrates*np.sign(h-tg)
@@ -246,12 +246,12 @@ elif mode=='node':
         sqrt_nsamps=np.sqrt(nodes)
         
         # Calculate L1 and L2 norm 
-        L1=LA.norm(W,1,axis=0)
-        L2=LA.norm(W,2,axis=0)
+        L1norm=LA.norm(W,1,axis=0)
+        L2norm=LA.norm(W,2,axis=0)
      
         # Calculate hoyer's sparsness
         h_vec = np.zeros((1,dim))
-        h_vec=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
+        h_vec=(sqrt_nsamps-(L1norm/L2norm))/(sqrt_nsamps-1)
         
         tg_vec = np.ones(dim)*tg
         # Update beta       
@@ -380,11 +380,12 @@ if condition==True:
             
             # Print cost and errors after every training epoch       
             print("< Epoch", "{:02d}".format(epoch+1),"> Cost :", "{:.3f}".format(cost_epoch)\
-                                            ,"/ Train err :", "{:.3f}".format(train_err_epoch),"/ Test err :","{:.3f}".format(test_err_epoch))
-
+                                            ,"/ Train err :", "{:.3f}".format(train_err_epoch),"/ Test err :","{:.3f}".format(test_err_epoch)) 
+            print("             beta :",np.mean(np.mean(plot_beta,axis=1),axis=1))
+            print("             hsp :",np.mean(np.mean(plot_hsp,axis=1),axis=1))  
 
         # Print final accuracy on test set
-        print ("")
+        print("")
         print("* Test accuracy :", "{:.3f}".format(1-sess.run(error,{X:test_x, Y:test_y})))
             
 else:
@@ -398,23 +399,36 @@ else:
 
 
 if condition==True:
-       
+    
+    
+    # make a new 'results' directory in the current directory
+    current_directory = os.getcwd()
+    final_directory = os.path.join(current_directory, r'results')
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory) 
+      
     # Plot the change of learning rate
+    plt.figure() 
     plt.title("Learning rate plot",fontsize=16)
     plot_lr=plot_lr[1:]
     plt.ylim(0.0, lr_init*1.2)
     plt.plot(plot_lr)
-    plt.show()
+    plt.savefig(final_directory+'/learning_rate.png')
+    plt.show(block=False)
+    
     
     # Plot the change of cost
+    plt.figure() 
     plt.title("Cost plot",fontsize=16)
     plot_cost=plot_cost[1:]
     plt.plot(plot_cost)
-    plt.show()   
+    plt.savefig(final_directory+'/cost.png')
+    plt.show(block=False)   
     
  
   
     # Plot train & test error
+    plt.figure() 
     plt.title("Train & Test error plot",fontsize=16)
     plot_train_err=plot_train_err[1:]
     plt.plot(plot_train_err)
@@ -423,37 +437,37 @@ if condition==True:
     plt.plot(plot_test_err)
     plt.ylim(0.0, 1.0)
     plt.legend(['Train error', 'Test error'],loc='upper right')
-    plt.show() 
+    plt.savefig(final_directory+'/error.png')
+    plt.show(block=False) 
+    
 
 
  
     # Plot the change of beta value
     print("")       
+    plt.figure() 
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
         plt.title("Beta plot \n Hidden layer %d"%(i+1),fontsize=16)
         plot_beta[i]=plot_beta[i][1:]
         plt.plot(plot_beta[i])
         plt.ylim(0.0, np.max(max_beta)*1.2)
-        plt.show()
+        plt.savefig(final_directory+'/beta%d.png'%(i+1))
+        plt.show(block=False)
     
     
     # Plot the change of Hoyer's sparsity
-    print("")            
+    print("")      
+    plt.figure()       
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
         plt.title("Hoyer's sparsity plot \n Hidden layer %d"%(i+1),fontsize=16)
         plot_hsp[i]=plot_hsp[i][1:]
         plt.plot(plot_hsp[i])
         plt.ylim(0.0, 1.0)
-        plt.show()
-    
-    
-    # make a new 'results' directory in the current directory
-    current_directory = os.getcwd()
-    final_directory = os.path.join(current_directory, r'results')
-    if not os.path.exists(final_directory):
-        os.makedirs(final_directory) 
+        plt.savefig(final_directory+'/hsp%d.png'%(i+1))
+        plt.show(block=False)
+
         
     # save results as .mat file
     sio.savemat(final_directory+"/result_learningrate.mat", mdict={'lr': plot_lr})
