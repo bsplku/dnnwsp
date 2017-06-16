@@ -252,7 +252,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              beta_lrates = 1e-2,        L2_reg = 1e-4,
              
             # flag_nodewise =1 is the node-wise control of weight sparsity 
-             flag_nodewise =0 is the layer-wise control of weight sparsity
+            # flag_nodewise =0 is the layer-wise control of weight sparsity
             
              flag_nodewise = 0,
              # Save path  
