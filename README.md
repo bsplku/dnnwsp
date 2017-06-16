@@ -5,7 +5,7 @@
 * In these Python-based software toolboxes using either Theano or TensorFlow library, we implemented our DNN method so that novice users to the DNN can try our model using our sample data and finally to adopt the method to their dataset. 
 
 # Sample data
-* We prepared sample [fMRI data](http://bspl.korea.ac.kr/lhrhadvs_sample_data.mat) that were acquired during the four sensorimotor tasks inclduing lef-thand clecnhing, right-hand clecnhing, auditory attention, and visual stimulus tasks [1]. 
+* We prepared sample [fMRI data](http://bspl.korea.ac.kr/lhrhadvs_sample_data.mat) that were acquired during the four sensorimotor tasks including left-thand clenching, right-hand clenching, auditory attention, and visual stimulus tasks [1]. 
 
 # Prerequisite
 * Python3.6 with libraries including the Theano and/or TensorFlow. 
