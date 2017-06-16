@@ -6,11 +6,19 @@ Created on Fri Jun  9 18:09:12 2017
 @author: hailey
 """
 
-import matplotlib.pyplot as plt
+# This import statement gives Python access to all of TensorFlow's classes, methods, and symbols. 
 import tensorflow as tf
+# NumPy is the fundamental package for scientific computing with Python.
 import numpy as np
+# Linear algebra module for calculating L1 and L2 norm  
 from numpy import linalg as LA
-import scipy.io
+# To plot the results
+import matplotlib.pyplot as plt
+# To check the directory when saving the results
+import os.path
+# The module for file input and output
+import scipy.io as sio
+
 
 ################################################# Customization part #################################################
 
@@ -36,12 +44,12 @@ Select optimizer
 Momentum'
 'RMSProp'
 """
-optimizer_algorithm='GradientDescent'
+optimizer_algorithm='Adam'
 
 """
 Load your own data here
 """
-dataset = scipy.io.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_sample_data2.mat')
+dataset = sio.loadmat('/home/hailey/01_study/prni2017_samples/lhrhadvs_sample_data2.mat')
 
 
 """ 
@@ -56,7 +64,7 @@ Set learning parameters
 k_folds=5
 
 # Set total epoch
-total_epoch=300
+total_epoch=100
 # Set mini batch size
 batch_size=50
 # Let anealing to begin after **th epoch

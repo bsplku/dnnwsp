@@ -35,20 +35,16 @@ from customizationGUI \
 datasets = sio.loadmat('lhrhadvs_sample_data.mat')
 
 
-
 train_x = datasets['train_x']
 train_y = np.zeros((np.shape(datasets['train_y'])[0],np.max(datasets['train_y'])+1))
-# trainsform classes into One-hot
+# transform into One-hot
 for i in np.arange(np.shape(datasets['train_y'])[0]):
     train_y[i][datasets['train_y'][i][0]]=1 
-datasets['train_y']
-
 
 
 test_x = datasets['test_x']
-
 test_y = np.zeros((np.shape(datasets['test_y'])[0],np.max(datasets['test_y'])+1))
-# trainsform classes into One-hot
+# transform into One-hot
 for i in np.arange(np.shape(datasets['test_y'])[0]):
     test_y[i][datasets['test_y'][i][0]]=1 
 
@@ -56,97 +52,39 @@ for i in np.arange(np.shape(datasets['test_y'])[0]):
 ################################################# Build Model #################################################
 
 
-
-# We need 'node_index' for split placeholder (hidden_nodes=[100, 100, 100] -> nodes_index=[0, 100, 200, 300])
+# 'node_index' to split placeholder, for an example, given hidden_nodes=[100, 100, 100], nodes_index=[0, 100, 200, 300]
 nodes_index= [int(np.sum(nodes[1:i+1])) for i in np.arange(np.shape(nodes)[0]-1)]
 
-# Make placeholders to make our model in advance, then fill the values later when training or testing
+# Make two placeholders to fill the values later when training or testing
 X=tf.placeholder(tf.float32,[None,nodes[0]])
 Y=tf.placeholder(tf.float32,[None,nodes[-1]])
 
-# Make weight variables which are randomly initialized
+# Create randomly initialized weight variables 
 w_init=[tf.div(tf.random_normal([nodes[i],nodes[i+1]]), tf.sqrt(float(nodes[i])/2)) for i in np.arange(np.shape(nodes)[0]-1)]
 w=[tf.Variable(w_init[i], dtype=tf.float32) for i in np.arange(np.shape(nodes)[0]-1)]
-# Make bias variables which are randomly initialized
-b=[tf.Variable(tf.random_normal([nodes[i+1]])) for i in np.arange(np.shape(nodes)[0]-1)]
+# Create randomly initialized bias variables 
+b=[tf.Variable(tf.random_normal([nodes[i+1]]), dtype=tf.float32) for i in np.arange(np.shape(nodes)[0]-1)]
 
-# Finally build our DNN model 
+# Build MLP model 
 hidden_layers=[0.0]*(np.shape(nodes)[0]-2)
 for i in np.arange(np.shape(nodes)[0]-2):
-    
     # Input layer
     if i==0:
         hidden_layers[i]=tf.add(tf.matmul(X,w[i]),b[i])
         hidden_layers[i]=tf.nn.tanh(hidden_layers[i])
-        
     # The other layers    
     else:     
         hidden_layers[i]=tf.add(tf.matmul(hidden_layers[i-1],w[i]),b[i])
         hidden_layers[i]=tf.nn.tanh(hidden_layers[i])
-
+# Output layer
 output_layer=tf.add(tf.matmul(hidden_layers[-1],w[-1]),b[-1])
+
+# Logistic regression layer
 logRegression_layer=tf.nn.tanh(output_layer)
-
-
-                                 
-
+                    
 
 
 ############################################# Function Definition #############################################
-
-
-
-# Make placeholders for total beta vectors (make a long one to concatenate every beta vector) 
-def build_betavec():
-    if mode=='layer':
-        Beta_vec=tf.placeholder(tf.float32,[np.shape(nodes)[0]-2])
-    elif mode=='node':
-        Beta_vec=tf.placeholder(tf.float32,[np.sum(nodes[1:-1])])
-
-    return Beta_vec
-
-
-# Make L1 loss term and L2 loss term for regularisation
-def build_L1loss():
-    if mode=='layer':
-        L1_loss=[Beta_vec[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
-    elif mode=='node':
-        L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta_vec[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
-
-
-    return L1_loss
-
-       
-
-# Define cost term with cross entropy and L1 and L2 tetm     
-def build_cost():
-
-    # A softmax regression has two steps: 
-    # first we add up the evidence of our input being in certain classes, 
-    # and then we convert that evidence into probabilities.
-    cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
-                                     + tf.reduce_sum(L1_loss) + L2_reg*tf.reduce_sum(L2_loss)   
-    
-  
-    return cost
-
-
-# TensorFlow provides optimizers that slowly change each variable in order to minimize the loss function.
-def build_optimizer(Lr):
-    if optimizer_algorithm=='GradientDescent':
-        optimizer=tf.train.GradientDescentOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='Adagrad':
-        optimizer=tf.train.AdagradOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='Adam':
-        optimizer=tf.train.AdamOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='Momentum':
-        optimizer=tf.train.MomentumOptimizer(Lr).minimize(cost) 
-    elif optimizer_algorithm=='RMSProp':
-        optimizer=tf.train.RMSPropOptimizer(Lr).minimize(cost) 
-
-    return optimizer
-
-
 
 if mode=='layer':
     # Weight sparsity control with Hoyer's sparsness (Layer wise)  
@@ -155,17 +93,17 @@ if mode=='layer':
         # Get value of weight
         W=sess.run(w_)
         [nodes,dim]=W.shape  
-        num_elements=nodes*dim
- 
+        
         # vectorize weight matrix 
-        Wvec=W.flatten()
+        Wvec=W.flatten()     
+        sqrt_nsamps=np.sqrt(Wvec.shape[0])
         
         # Calculate L1 and L2 norm     
         L1=LA.norm(Wvec,1)
         L2=LA.norm(Wvec,2)
         
         # Calculate hoyer's sparsness
-        h=(np.sqrt(num_elements)-(L1/L2))/(np.sqrt(num_elements)-1)
+        h=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
         
         # Update beta
         b-=lr_beta*np.sign(h-tg)
@@ -184,18 +122,19 @@ elif mode=='node':
         # Get value of weight
         W=sess.run(w_)
         [nodes,dim]=W.shape
+        sqrt_nsamps=np.sqrt(nodes)
         
         # Calculate L1 and L2 norm 
         L1=LA.norm(W,1,axis=0)
         L2=LA.norm(W,2,axis=0)
         
-        h_vec = np.zeros((1,dim))
         tg_vec = np.ones(dim)*tg
-        
+     
         # Calculate hoyer's sparsness
-        h_vec=(np.sqrt(nodes)-(L1/L2))/(np.sqrt(nodes)-1)
+        h_vec = np.zeros((1,dim))
+        h_vec=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
         
-        # Update beta
+        # Update beta       
         b_vec-=lr_beta*np.sign(h_vec-tg_vec)
         
         # Trim value
@@ -207,31 +146,115 @@ elif mode=='node':
     
 
 
+# Make placeholders for total beta array (make a long one to concatenate every beta vector) 
+def init_beta():
+    if mode=='layer':
+        # The size is same with the number of layers
+        Beta=tf.placeholder(tf.float32,[np.shape(nodes)[0]-2])
+    elif mode=='node':
+        # The size is same with the number of nodes
+        Beta=tf.placeholder(tf.float32,[np.sum(nodes[1:-1])])
+
+    return Beta
 
 
+# Make L1 loss term for regularization
+def init_L1loss():
+    if mode=='layer':
+        # Get L1 loss term by simply multiplying beta(scalar value) and L1 norm of weight for each layer
+        L1_loss=[Beta[i]*tf.reduce_sum(abs(w[i])) for i in np.arange(np.shape(nodes)[0]-2)]
+    elif mode=='node':
+        # Get L1 loss term by multiplying beta(vector values as many as nodes) and L1 norm of weight for each layer
+        L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
 
-lr = lr_init
-
-Beta_vec = build_betavec()
-
-L1_loss = build_L1loss()
-L2_loss = [tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+    return L1_loss
 
 
-cost = build_cost()
+# Make L2 loss term for regularization
+def init_L2loss():
+    L2_loss=[tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
+    return L2_loss
 
 
-# Make learning rate as placeholder to update learning rate every iterarion 
-Lr=tf.placeholder(tf.float32)
-optimizer=build_optimizer(Lr)
-  
+       
 
-correct_prediction=tf.equal(tf.argmax(output_layer,1),tf.argmax(Y,1))  
+# Define cost term (Cost = cross entropy + L1 term + L2 term )    
+def init_cost():
+
+    # A softmax regression : it adds up the evidence of our input being in certain classes, and converts that evidence into probabilities.
+    cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
+                                     + tf.reduce_sum(L1_loss) + L2_reg*tf.reduce_sum(L2_loss)   
     
-# calculate mean error(accuracy) depending on the frequency it predicts correctly   
+    return cost
+
+
+# TensorFlow provides optimizers that slowly change each variable in order to minimize the loss function.
+def init_optimizer(Lr):
+    if optimizer_algorithm=='GradientDescent':
+        optimizer=tf.train.GradientDescentOptimizer(Lr).minimize(cost) 
+    elif optimizer_algorithm=='Adagrad':
+        optimizer=tf.train.AdagradOptimizer(Lr).minimize(cost) 
+    elif optimizer_algorithm=='Adam':
+        optimizer=tf.train.AdamOptimizer(Lr).minimize(cost) 
+    elif optimizer_algorithm=='Momentum':
+        optimizer=tf.train.MomentumOptimizer(Lr).minimize(cost) 
+    elif optimizer_algorithm=='RMSProp':
+        optimizer=tf.train.RMSPropOptimizer(Lr).minimize(cost) 
+
+    return optimizer
+
+
+
+# initialization   
+def init_otherVars():           
+    if mode=='layer': 
+        beta_val = np.zeros(np.shape(nodes)[0]-2)
+        beta = np.zeros(np.shape(nodes)[0]-2)
+        hsp_val = np.zeros(np.shape(nodes)[0]-2)            
+        plot_beta = np.zeros(np.shape(nodes)[0]-2)
+        plot_hsp = np.zeros(np.shape(nodes)[0]-2)
+                   
+    elif mode=='node':                       
+        beta_val = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]  
+        beta = np.zeros(np.sum(nodes[1:-1]))
+        hsp_val = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]            
+        plot_beta = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]
+        plot_hsp = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]
+    
+    # make arrays to store and plot results
+    plot_lr=np.zeros(1)
+    plot_cost=np.zeros(1)
+    plot_train_err=np.zeros(1)
+    plot_test_err=np.zeros(1)
+    
+    # initialize learning rate
+    lr = lr_init 
+    
+    
+    return lr, beta_val, beta, hsp_val, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err
+        
+
+
+
+
+# Make a placeholder for learning rate to be able to update learning rate (Learning rate decaying) 
+Lr=tf.placeholder(tf.float32)
+
+
+Beta = init_beta()
+L1_loss = init_L1loss()
+L2_loss = init_L2loss()
+cost = init_cost()
+
+optimizer=init_optimizer(Lr)
+
+ 
+correct_prediction=tf.equal(tf.argmax(logRegression_layer,1),tf.argmax(Y,1))  
+# calculate an average error depending on how frequent it classified correctly   
 error=1-tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
 
 
+lr, beta_val, beta, hsp_val, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err = init_otherVars()
 
 
 ############################################# Condition check #############################################
@@ -261,53 +284,29 @@ else:
 
 if condition==True:
     
-    # variables are not initialized when you call tf.Variable. 
+
+    # variables are not initialized when you call tf.Variable
     # To initialize all the variables in a TensorFlow program, you must explicitly call a special operation         
     init = tf.global_variables_initializer()              
+     
 
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)) as sess:           
     
-    
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)) as sess:
-        
         # run tensorflow variable initialization
         sess.run(init)
-    
-        # initialization    
-        def initialization():           
-            if mode=='layer': 
-                beta=np.zeros(np.shape(nodes)[0]-2)
-                beta_vec = np.zeros(np.shape(nodes)[0]-2)
-                hsp = np.zeros(np.shape(nodes)[0]-2)            
-                plot_beta = np.zeros(np.shape(nodes)[0]-2)
-                plot_hsp = np.zeros(np.shape(nodes)[0]-2)
-                           
-            elif mode=='node':                       
-                beta = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]  
-                beta_vec=np.zeros(np.sum(nodes[1:-1]))
-                hsp = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]            
-                plot_beta = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]
-                plot_hsp = [np.zeros(nodes[i+1]) for i in np.arange(np.shape(nodes)[0]-2)]
-                
-            # make arrays to plot results
-            plot_lr=np.zeros(1)
-            plot_cost=np.zeros(1)
-            plot_train_err=np.zeros(1)
-            plot_test_err=np.zeros(1)
-            
-            return beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err
-                
-        beta, beta_vec, hsp, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err = initialization()
         
 
-        
-           
-        # Calculate how many mini-batch iterations
-        total_batch=int(np.shape(train_x)[0]/batch_size) 
-               
-        # train and get cost
-        cost_avg=0.0
+        # Start training 
         for epoch in np.arange(total_epoch):            
-            cost_epoch=0.0
+                   
+            # Shuffle training data when starting each epoch           
+            total_sample = np.size(train_x, axis=0)
+            sample_ids = np.arange(total_sample)
+            np.random.shuffle(sample_ids) 
+            
+            train_x_shuff = np.array([ train_x[i] for i in sample_ids])
+            train_y_shuff = np.array([ train_y[i] for i in sample_ids])
+            
             
             # Begin Annealing
             if beginAnneal == 0:
@@ -315,72 +314,71 @@ if condition==True:
             elif epoch+1 > beginAnneal:
                 lr = max( min_lr, (-decay_rate*(epoch+1) + (1+decay_rate*beginAnneal)) * lr )  
             
-            # shuffle data in every epoch           
-            total_sample = np.size(train_x, axis=0)
-            sample_ids = np.arange(total_sample)
-            np.random.shuffle(sample_ids) 
-
         
-            # Train at each mini batch    
+            
+            
+            # Calculate how many mini-batch iterations we need
+            total_batch = int(np.shape(train_x)[0]/batch_size) 
+            
+            cost_epoch=0.0
+            
+            # minibatch based training  
             for batch in np.arange(total_batch):
-                batch_x = train_x[sample_ids[batch*batch_size:(batch+1)*batch_size]]
-                batch_y = train_y[sample_ids[batch*batch_size:(batch+1)*batch_size]]
+                batch_x = train_x_shuff[sample_ids[batch*batch_size:(batch+1)*batch_size]]
+                batch_y = train_y_shuff[sample_ids[batch*batch_size:(batch+1)*batch_size]]
                 
                 # Get cost and optimize the model
-                cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Y:batch_y, Beta_vec:beta_vec })
+                cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Y:batch_y, Beta:beta})
 
                 cost_epoch+=cost_batch/total_batch      
         
-                
-                
         
-                # run weight sparsity control function
-                for i in np.arange(np.shape(nodes)[0]-2):
-                    [hsp[i],beta[i]]=Hoyers_sparsity_control(w[i], beta[i], max_beta[i], tg_hsp[i])   
-                    
-                if mode=='layer':               
-                    beta_vec=beta                      
-                elif mode=='node':                              
-                    beta_vec=[item for sublist in beta for item in sublist]
-            
+                # weight sparsity control    
+                if mode=='layer':                   
+                    for i in np.arange(np.shape(nodes)[0]-2):
+                        [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hsp[i])   
+                    beta=beta_val                      
 
-            train_input_shuff = np.array([ train_x[i] for i in sample_ids])
-            train_output_shuff = np.array([ train_y[i] for i in sample_ids])
-            
-            train_err_epoch=sess.run(error,{X:train_input_shuff, Y:train_output_shuff})
+                elif mode=='node':                             
+                    for i in np.arange(np.shape(nodes)[0]-2):
+                        [hsp_val[i], beta_val[i]] = Hoyers_sparsity_control(w[i], beta_val[i], max_beta[i], tg_hsp[i])   
+                    # flatten beta_val (shape (3, 100) -> (300,))
+                    beta=[item for sublist in beta_val for item in sublist]
+               
+            # get train error
+            train_err_epoch=sess.run(error,{X:train_x_shuff, Y:train_y_shuff})
             plot_train_err=np.hstack([plot_train_err,[train_err_epoch]])
             
+            # get test error
             test_err_epoch=sess.run(error,{X:test_x, Y:test_y})
             plot_test_err=np.hstack([plot_test_err,[test_err_epoch]])
             
             
-            # make space to plot beta, sparsity level
+            
+            # Save the results to plot at the end
             plot_lr=np.hstack([plot_lr,[lr]])
             plot_cost=np.hstack([plot_cost,[cost_epoch]])
-
             
-            # save footprint for plot
             if mode=='layer':
-                plot_hsp=[np.vstack([plot_hsp[i],[hsp[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
-                plot_beta=[np.vstack([plot_beta[i],[beta_vec[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
+                plot_hsp=[np.vstack([plot_hsp[i],[hsp_val[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
+                plot_beta=[np.vstack([plot_beta[i],[beta[i]]]) for i in np.arange(np.shape(nodes)[0]-2)]
                 
             elif mode=='node':
-                plot_hsp=[np.vstack([plot_hsp[i],[np.transpose(hsp[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
-                plot_beta=[np.vstack([plot_beta[i],[np.transpose(beta[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
+                plot_hsp=[np.vstack([plot_hsp[i],[np.transpose(hsp_val[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
+                plot_beta=[np.vstack([plot_beta[i],[np.transpose(beta_val[i])]]) for i in np.arange(np.shape(nodes)[0]-2)]
 
             
-                    
-            # Print cost at each epoch        
-            print("< Epoch", "{:02d}".format(epoch+1),"> Cost : ", "{:.4f}".format(cost_epoch))
-            
+            # Print cost and errors after every training epoch       
+            print("< Epoch", "{:02d}".format(epoch+1),"> Cost :", "{:.3f}".format(cost_epoch)\
+                                            ,"/ Train err :", "{:.3f}".format(train_err_epoch),"/ Test err :","{:.3f}".format(test_err_epoch))
 
 
-
-        # Print final accuracy of test set
-        print("Accuracy :",1-sess.run(error,{X:test_x, Y:test_y}))
+        # Print final accuracy on test set
+        print ("")
+        print("* Test accuracy :", "{:.3f}".format(1-sess.run(error,{X:test_x, Y:test_y})))
             
 else:
-    # Don't run the sesstion but print 'failed' if any condition is unmet
+    # Don't run the session but print 'failed' if any condition is not met
     print("Failed!")  
      
     
@@ -402,7 +400,6 @@ if condition==True:
     plt.title("Cost plot",fontsize=16)
     plot_cost=plot_cost[1:]
     plt.plot(plot_cost)
-#    plt.yscale('log')
     plt.show()   
     
  
@@ -416,13 +413,10 @@ if condition==True:
     plt.plot(plot_test_err)
     plt.ylim(0.0, 1.0)
     plt.legend(['Training error', 'Test error'],loc='upper right')
-#    plt.yscale('log')
     plt.show() 
 
 
  
-    
-    
     # Plot the change of beta value
     print("")       
     for i in np.arange(np.shape(nodes)[0]-2):
@@ -434,12 +428,13 @@ if condition==True:
         plt.ylim(0.0, np.max(max_beta)*1.2)
         plt.show()
     
-    # Plot the change of Hoyer's sparsness
+    
+    # Plot the change of Hoyer's sparsity
     print("")            
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
         print("                  < Hidden layer",i+1,">")
-        plt.title("Hoyer's sparsness plot",fontsize=16)
+        plt.title("Hoyer's sparsity plot",fontsize=16)
         plot_hsp[i]=plot_hsp[i][1:]
         plt.plot(plot_hsp[i])
         plt.ylim(0.0, 1.0)
