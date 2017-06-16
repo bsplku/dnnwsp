@@ -251,8 +251,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              # max_beta=[0.05, 0.8, 0.8], # Maximum beta changes
              beta_lrates = 1e-2,        L2_reg = 1e-4,
              
-            # flag_nodewise =1 is the node-wise control of weight sparsity 
-            # flag_nodewise =0 is the layer-wise control of weight sparsity
+             # flag_nodewise =1 is the node-wise control of weight sparsity 
+             # flag_nodewise =0 is the layer-wise control of weight sparsity
             
              flag_nodewise = 0,
              # Save path  
@@ -493,7 +493,11 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         else:
             sav_text.write("%d-" % (n_nodes[layer_idx+1]))
 
-    sav_name = '%s/mlp_rst_inv_%s.mat' % (sav_path,sav_text.getvalue())
+    if flag_nodewise==1:
+       sav_name = '%s/mlp_rst_node_%s.mat' % (sav_path,sav_text.getvalue())
+    else: 
+       sav_name = '%s/mlp_rst_layer_%s.mat' % (sav_path,sav_text.getvalue())
+
     sav_text.close()
         
     data_variable = {}; 
