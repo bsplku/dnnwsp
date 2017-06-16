@@ -108,14 +108,19 @@ def init_L1loss():
     elif mode=='node':
         # Get L1 loss term by multiplying beta(vector values as many as nodes) and L1 norm of weight for each layer
         L1_loss=[tf.reduce_mean(tf.matmul(abs(w[i]),tf.cast(tf.diag(Beta[nodes_index[i]:nodes_index[i+1]]),tf.float32))) for i in np.arange(np.shape(nodes)[0]-2)]
+        
+    L1_loss_total=tf.reduce_sum(L1_loss)
 
-    return L1_loss
+    return L1_loss_total
 
 
 # Make L2 loss term for regularization
 def init_L2loss():
     L2_loss=[tf.reduce_sum(tf.square(w[i])) for i in np.arange(np.shape(nodes)[0]-1)] 
-    return L2_loss
+    
+    L2_loss_total=L2_reg*tf.reduce_sum(L2_loss) 
+    
+    return L2_loss_total
 
 
        
@@ -125,7 +130,7 @@ def init_cost():
 
     # A softmax regression : it adds up the evidence of our input being in certain classes, and converts that evidence into probabilities.
     cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logRegression_layer, labels=Y)) \
-                                     + tf.reduce_sum(L1_loss) + L2_reg*tf.reduce_sum(L2_loss)   
+                                     + L1_loss_total + L2_loss_total 
     
     return cost
 
@@ -184,8 +189,8 @@ Lr=tf.placeholder(tf.float32)
 
 
 Beta = init_beta()
-L1_loss = init_L1loss()
-L2_loss = init_L2loss()
+L1_loss_total = init_L1loss()
+L2_loss_total = init_L2loss()
 cost = init_cost()
 
 optimizer=init_optimizer(Lr)
@@ -243,13 +248,12 @@ elif mode=='node':
         # Calculate L1 and L2 norm 
         L1=LA.norm(W,1,axis=0)
         L2=LA.norm(W,2,axis=0)
-        
-        tg_vec = np.ones(dim)*tg
      
         # Calculate hoyer's sparsness
         h_vec = np.zeros((1,dim))
         h_vec=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
         
+        tg_vec = np.ones(dim)*tg
         # Update beta       
         b_vec-=lr_beta*np.sign(h_vec-tg_vec)
         
@@ -305,7 +309,7 @@ if condition==True:
         # Start training 
         for epoch in np.arange(total_epoch):            
                    
-            # Shuffle training data when starting each epoch           
+            # Shuffle training data at the begining of each epoch           
             total_sample = np.size(train_x, axis=0)
             sample_ids = np.arange(total_sample)
             np.random.shuffle(sample_ids) 
@@ -330,8 +334,8 @@ if condition==True:
             
             # minibatch based training  
             for batch in np.arange(total_batch):
-                batch_x = train_x_shuff[sample_ids[batch*batch_size:(batch+1)*batch_size]]
-                batch_y = train_y_shuff[sample_ids[batch*batch_size:(batch+1)*batch_size]]
+                batch_x = train_x_shuff[batch*batch_size:(batch+1)*batch_size]
+                batch_y = train_y_shuff[batch*batch_size:(batch+1)*batch_size]
                 
                 # Get cost and optimize the model
                 cost_batch,_=sess.run([cost,optimizer],{Lr:lr, X:batch_x, Y:batch_y, Beta:beta})
@@ -411,14 +415,14 @@ if condition==True:
  
   
     # Plot train & test error
-    plt.title("Training & Test error",fontsize=16)
+    plt.title("Train & Test error plot",fontsize=16)
     plot_train_err=plot_train_err[1:]
     plt.plot(plot_train_err)
     plt.hold
     plot_test_err=plot_test_err[1:]
     plt.plot(plot_test_err)
     plt.ylim(0.0, 1.0)
-    plt.legend(['Training error', 'Test error'],loc='upper right',fontsize=16)
+    plt.legend(['Train error', 'Test error'],loc='upper right')
     plt.show() 
 
 
@@ -427,8 +431,7 @@ if condition==True:
     print("")       
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                  < Hidden layer",i+1,">",fontsize=16)
-        plt.title("Beta plot",fontsize=12)
+        plt.title("Beta plot \n Hidden layer %d"%(i+1),fontsize=16)
         plot_beta[i]=plot_beta[i][1:]
         plt.plot(plot_beta[i])
         plt.ylim(0.0, np.max(max_beta)*1.2)
@@ -439,8 +442,7 @@ if condition==True:
     print("")            
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                  < Hidden layer",i+1,">",fontsize=16)
-        plt.title("Hoyer's sparsity plot",fontsize=12)
+        plt.title("Hoyer's sparsity plot \n Hidden layer %d"%(i+1),fontsize=16)
         plot_hsp[i]=plot_hsp[i][1:]
         plt.plot(plot_hsp[i])
         plt.ylim(0.0, 1.0)
@@ -454,12 +456,12 @@ if condition==True:
         os.makedirs(final_directory) 
         
     # save results as .mat file
-    sio.savemat("results/result_learningrate.mat", mdict={'lr': plot_lr})
-    sio.savemat("results/result_cost.mat", mdict={'cost': plot_cost})
-    sio.savemat("results/result_train_err.mat", mdict={'trainErr': plot_train_err})
-    sio.savemat("results/result_test_err.mat", mdict={'testErr': plot_test_err})
-    sio.savemat("results/result_beta.mat", mdict={'beta': plot_beta})
-    sio.savemat("results/result_hsp.mat", mdict={'hsp': plot_hsp})
+    sio.savemat(final_directory+"/result_learningrate.mat", mdict={'lr': plot_lr})
+    sio.savemat(final_directory+"/result_cost.mat", mdict={'cost': plot_cost})
+    sio.savemat(final_directory+"/result_train_err.mat", mdict={'trainErr': plot_train_err})
+    sio.savemat(final_directory+"/result_test_err.mat", mdict={'testErr': plot_test_err})
+    sio.savemat(final_directory+"/result_beta.mat", mdict={'beta': plot_beta})
+    sio.savemat(final_directory+"/result_hsp.mat", mdict={'hsp': plot_hsp})
 
 else:
     None 
