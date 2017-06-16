@@ -10,6 +10,7 @@ from tkinter import ttk
 def get_value_ft():
     global mode
     global optimizer_algorithm
+    global momtentum
     global nodes
     global n_epochs
     global batch_size
@@ -24,17 +25,18 @@ def get_value_ft():
     
     mode=RadioButtonVar.get() 
     optimizer_algorithm=e2.get()
-    nodes=[int(i) for i in e3.get().split(' ')]
-    n_epochs=int(e4.get())
-    batch_size=int(e5.get())
-    beginAnneal=int(e6.get())
-    decay_rate=float(e7.get())
-    lr_init=float(e8.get())
-    lr_min=float(e9.get())
-    beta_lrates=float(e10.get())
-    L2_reg=float(e11.get())
-    max_beta=[float(i) for i in e12.get().split(' ')]
-    tg_hspset=[float(i) for i in e13.get().split(' ')]
+    momtentum=e3.get()
+    nodes=[int(i) for i in e4.get().split(' ')]
+    n_epochs=int(e5.get())
+    batch_size=int(e6.get())
+    beginAnneal=int(e7.get())
+    decay_rate=float(e8.get())
+    lr_init=float(e9.get())
+    lr_min=float(e10.get())
+    beta_lrates=float(e11.get())
+    L2_reg=float(e12.get())
+    max_beta=[float(i) for i in e13.get().split(' ')]
+    tg_hspset=[float(i) for i in e14.get().split(' ')]
     
     
     master.destroy()    
@@ -62,17 +64,18 @@ ComboBoxVar = StringVar()
 # Construct labels with parent master 
 ttk.Label(master, text="Mode").grid(row=1)
 ttk.Label(master, text="Optimizer algorithm").grid(row=3)
-ttk.Label(master, text="Nodes").grid(row=4)
-ttk.Label(master, text="Total epoch").grid(row=5)
-ttk.Label(master, text="Batch size").grid(row=6)
-ttk.Label(master, text="BeginAnneal").grid(row=7)
-ttk.Label(master, text="Decay rate").grid(row=8)
-ttk.Label(master, text="Initial learning rate").grid(row=9)
-ttk.Label(master, text="Minimum learning rate").grid(row=10)
-ttk.Label(master, text="Beta learning rate").grid(row=11)
-ttk.Label(master, text="L2 regularization parameter").grid(row=12)
-ttk.Label(master, text="Max beta").grid(row=13)
-ttk.Label(master, text="Target hsp").grid(row=14)
+ttk.Label(master, text="Momtentum").grid(row=4)
+ttk.Label(master, text="Nodes").grid(row=5)
+ttk.Label(master, text="Total epoch").grid(row=6)
+ttk.Label(master, text="Batch size").grid(row=7)
+ttk.Label(master, text="BeginAnneal").grid(row=8)
+ttk.Label(master, text="Decay rate").grid(row=9)
+ttk.Label(master, text="Initial learning rate").grid(row=10)
+ttk.Label(master, text="Minimum learning rate").grid(row=11)
+ttk.Label(master, text="Beta learning rate").grid(row=12)
+ttk.Label(master, text="L2 regularization parameter").grid(row=13)
+ttk.Label(master, text="Max beta").grid(row=14)
+ttk.Label(master, text="Target hsp").grid(row=15)
 
 # Create buttons, combo box, and entries
 e0=ttk.Radiobutton(master, text="Layer wise", value='layer', variable=RadioButtonVar)
@@ -90,40 +93,43 @@ e10 = ttk.Entry(master)
 e11 = ttk.Entry(master)
 e12 = ttk.Entry(master)
 e13 = ttk.Entry(master)
+e14 = ttk.Entry(master)
 
-
-########## Layer
-# Insert the inital values at indices
-e2.current(0)                       # optimizer algorithm
-e3.insert(0,[74484,100,100,100,4]) # nodes
-e4.insert(0, 200)                  # total epoch
-e5.insert(0, 100)                  # batch size
-e6.insert(0, 100)                  # beginAnneal
-e7.insert(0, 1e-3)                 # decay rate
-e8.insert(0, 1e-3)                 # initial learning rate
-e9.insert(0, 1e-4)                 # minimum learning rate
-e10.insert(0, 1e-1)                # learning rate of beta
-e11.insert(0, 1e-3)                # L2 parameter
-e12.insert(0, [0.1, 0.6, 0.6])    # max beta
-e13.insert(0, [0.5, 0.5, 0.5])     # target hsp     
-
-#          
-############ Node          
+########### Layer
 ## Insert the inital values at indices
 #e2.current(0)                       # optimizer algorithm
-#e3.insert(0,[74484,100,100,100,4]) # nodes
-#e4.insert(0, 200)                  # total epoch
-#e5.insert(0, 100)                  # batch size
-#e6.insert(0, 100)                  # beginAnneal
-#e7.insert(0, 1e-3)                 # decay rate
-#e8.insert(0, 1e-3)                 # initial learning rate
-#e9.insert(0, 1e-4)                 # minimum learning rate
-#e10.insert(0, 0.1)                # learning rate of beta
-#e11.insert(0, 1e-3)                # L2 parameter
-#e12.insert(0, [0.1, 0.7, 0.7])    # max beta
-#e13.insert(0, [0.5, 0.5, 0.5])     # target hsp               
+#e3.insert(0, 0.5)                      # Momentum
+#e4.insert(0,[74484,100,100,100,4]) # nodes
+#e5.insert(0, 200)                  # total epoch
+#e6.insert(0, 50)                  # batch size
+#e7.insert(0, 100)                  # beginAnneal
+#e8.insert(0, 1e-3)                 # decay rate
+#e9.insert(0, 1e-3)                 # initial learning rate
+#e10.insert(0, 1e-4)                 # minimum learning rate
+#e11.insert(0, 0.1)                # learning rate of beta
+#e12.insert(0, 1e-3)                # L2 parameter
+#e13.insert(0, [0.1, 0.6, 0.6])    # max beta
+#e14.insert(0, [0.5, 0.5, 0.5])     # target hsp               
 #          
-#          
+          
+          
+########## Node          
+# Insert the inital values at indices
+e2.current(0)                       # optimizer algorithm
+e3.insert(0, 0.5)                      # Momentum
+e4.insert(0,[74484,100,100,100,4]) # nodes
+e5.insert(0, 200)                  # total epoch
+e6.insert(0, 50)                  # batch size
+e7.insert(0, 100)                  # beginAnneal
+e8.insert(0, 1e-3)                 # decay rate
+e9.insert(0, 1e-3)                 # initial learning rate
+e10.insert(0, 1e-4)                 # minimum learning rate
+e11.insert(0, 0.03)                # learning rate of beta
+e12.insert(0, 1e-3)                # L2 parameter
+e13.insert(0, [0.15, 0.4, 0.4])    # max beta
+e14.insert(0, [0.3, 0.6, 0.6])     # target hsp               
+          
+          
           
           
           
@@ -150,5 +156,3 @@ ttk.Button(master, text='Done', command=get_value_ft).grid(row=15, column=1, pad
 
 # Call the mainloop
 master.mainloop()
-
-#mode, optimizer_algorithm, nodes, n_epochs, batch_size, beginAnneal, decay_rate, lr_init, lr_min,beta_lrates, L2_param, max_beta, tg_hspset
