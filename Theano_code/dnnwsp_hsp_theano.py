@@ -10,25 +10,27 @@ to apply a node-wise and layer-wise control of weight sparsity via Hoyer sparsen
 
 
 ################################################# Import #################################################
-import os.path
-import sys
-import timeit
 
-import numpy
-import numpy as np
-import scipy.io as sio
+import os.path # To check the directory when saving the results
+import sys # To print error or simple message 
+import timeit # To calculate computational time
 
-import theano
-import theano.tensor as T
+import numpy # NumPy is the fundamental package for scientific computing with Python.
+import numpy as np # Simplification 
+import scipy.io as sio # The module for file input and output
 
-from logistic_sgd import LogisticRegression
+import theano # Theano is the fundamental package for scientific computing with Python.
+import theano.tensor as T # Simplification 
 
+from logistic_sgd import LogisticRegression # Logisticregression function is to classifying classes
+
+# To read and write string information into a string buffer 
 try:
     from StringIO import StringIO
 except ImportError:
         from io import StringIO
 
-from numpy import linalg as LA
+from numpy import linalg as LA # Linear algebra module for calculating L1 and L2 norm  
 
 ########################################## Function definition #################################################
 
@@ -250,11 +252,11 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              beta_lrates = 1e-2,        L2_reg = 1e-4,
              
             # flag_nodewise =1 is the node-wise control of weight sparsity 
-            # flag_nodewise =0 is the layer-wise control of weight sparsity
+             flag_nodewise =0 is the layer-wise control of weight sparsity
             
              flag_nodewise = 0,
              # Save path  
-             sav_path = '/home/khc/workspace/prni2017',  
+             sav_path = '/Users/bspl/Downloads/dnnwsp-master/Theano_code', # a directory to save dnnwsp result  
               ):
                
     ########################################## Input data  #################################################
@@ -309,6 +311,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     # cost function
     cost = (classifier.negative_log_likelihood(y))
     
+    # L1 regularization term for either node-wise or layer-wise control 
     if flag_nodewise==1:
         for i in range(len(n_nodes)-2):
             node_size = n_nodes[i+1]; tg_index = np.arange((i * node_size),((i + 1) * node_size));
@@ -317,23 +320,12 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         for i in range(len(n_nodes)-2):
             cost += l1_penalty_layer[i] * classifier.L1[i]
 
+    # L2 regularization 
     cost += L2_reg * classifier.L2_sqr    
 
-    
-    updates_test = []
-    for hiddenlayer in classifier.hiddenLayer:
-        for i in range(1):
-            updates_test.append( hiddenlayer.updates[i] )
-           
-    test_model = theano.function(
-        inputs=[index],
-        outputs=[classifier.errors(y),classifier.mse(batch_size,n_nodes[-1],y)],
-        updates=updates_test,
-        givens={
-            x: test_set_x[index * batch_size:(index + 1) * batch_size],
-            y: test_set_y[index * batch_size:(index + 1) * batch_size]
-        }
-    )
+    # compiling a Theano function `train_model` that returns the cost, but
+    # in the same time updates the parameter of the model based on the rules
+    # defined in `updates`
     
     updates =[];
     # Select optimizer 'Grad' for GradientDescentOptimizer, 'Adam' for AdamOptimizer, 'Rmsp' for RMSPropOptimizer
@@ -350,10 +342,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         
     elif optimizer_algorithm=='Rmsp' :
         updates = RMSprop(cost, classifier.params, learning_rate)
-    
-    # compiling a Theano function `train_model` that returns the cost, but
-    # in the same time updates the parameter of the model based on the rules
-    # defined in `updates`
+  
     train_model = theano.function(
         inputs=[index, l1_penalty_layer,ln_rate,momentum],
         outputs=[cost,classifier.errors(y),classifier.mse(batch_size,n_nodes[-1],y)],
@@ -364,6 +353,21 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         },
         allow_input_downcast = True,
         on_unused_input = 'ignore'
+    )
+    
+    updates_test = []
+    for hiddenlayer in classifier.hiddenLayer:
+        for i in range(1):
+            updates_test.append( hiddenlayer.updates[i] )
+           
+    test_model = theano.function(
+        inputs=[index],
+        outputs=[classifier.errors(y),classifier.mse(batch_size,n_nodes[-1],y)],
+        updates=updates_test,
+        givens={
+            x: test_set_x[index * batch_size:(index + 1) * batch_size],
+            y: test_set_y[index * batch_size:(index + 1) * batch_size]
+        }
     )
 
     ########################################## Learning model #################################################
@@ -392,7 +396,6 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
     
             all_hsp_vals.append(np.zeros((n_epochs,n_nodes[i+1])));
             all_L1_beta_vals.append(np.zeros((n_epochs,n_nodes[i+1])));
-        
     else:
         all_hsp_vals = np.zeros((n_epochs,len(n_nodes)-2));  
         all_L1_beta_vals = np.zeros((n_epochs,len(n_nodes)-2));
@@ -400,7 +403,9 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
         L1_beta_vals= np.zeros(len(n_nodes)-2)
         cnt_hsp_val = np.zeros(len(n_nodes)-2);    
 
-    # start training 
+    ###################
+    #  start training 
+    ###################
     while (epoch < n_epochs) and (not done_looping):
         epoch = epoch + 1
         minibatch_all_avg_error = []; minibatch_all_avg_mse = []
