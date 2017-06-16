@@ -25,14 +25,15 @@ from customizationGUI \
 
 ################################################# Input data #################################################
 
-################ lhrhadvs_sample_data.mat ##################
-# train_x  = 240 volumes x 74484 voxels  
-# train_x  = 240 volumes x 1 [0:left-hand clenching task, 1:right-hand clenching task, 2:auditory task, 3:visual task]
-# test_x  = 120 volumes x 74484 voxels
-# test_y  = 120 volumes x 1 [0:left-hand clenching task, 1:right-hand clenching task, 2:auditory task, 3:visual task]
-############################################################
 
 datasets = sio.loadmat('lhrhadvs_sample_data.mat')
+
+################ lhrhadvs_sample_data.mat ##################
+# train_x  = 240 volumes x 74484 voxels  
+# train_y  = 240 volumes x 1 [0:LH, 1:RH, 2:AD, 3:VS]
+# test_x  = 120 volumes x 74484 voxels
+# test_y  = 120 volumes x 1 [0:LH, 1:RH, 2:AD, 3:VS]
+############################################################
 
 
 train_x = datasets['train_x']
@@ -85,65 +86,6 @@ logRegression_layer=tf.nn.tanh(output_layer)
 
 
 ############################################# Function Definition #############################################
-
-if mode=='layer':
-    # Weight sparsity control with Hoyer's sparsness (Layer wise)  
-    def Hoyers_sparsity_control(w_,b,max_b,tg):
-        
-        # Get value of weight
-        W=sess.run(w_)
-        [nodes,dim]=W.shape  
-        
-        # vectorize weight matrix 
-        Wvec=W.flatten()     
-        sqrt_nsamps=np.sqrt(Wvec.shape[0])
-        
-        # Calculate L1 and L2 norm     
-        L1=LA.norm(Wvec,1)
-        L2=LA.norm(Wvec,2)
-        
-        # Calculate hoyer's sparsness
-        h=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
-        
-        # Update beta
-        b-=lr_beta*np.sign(h-tg)
-        
-        # Trim value
-        b=0.0 if b<0.0 else b
-        b=max_b if b>max_b else b
-                         
-        return [h,b]
-    
-    
-elif mode=='node':   
-    # Weight sparsity control with Hoyer's sparsness (Node wise)
-    def Hoyers_sparsity_control(w_,b_vec,max_b,tg):
-    
-        # Get value of weight
-        W=sess.run(w_)
-        [nodes,dim]=W.shape
-        sqrt_nsamps=np.sqrt(nodes)
-        
-        # Calculate L1 and L2 norm 
-        L1=LA.norm(W,1,axis=0)
-        L2=LA.norm(W,2,axis=0)
-        
-        tg_vec = np.ones(dim)*tg
-     
-        # Calculate hoyer's sparsness
-        h_vec = np.zeros((1,dim))
-        h_vec=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
-        
-        # Update beta       
-        b_vec-=lr_beta*np.sign(h_vec-tg_vec)
-        
-        # Trim value
-        b_vec[b_vec<0.0]=0.0
-        b_vec[b_vec>max_b]=max_b
-        
-               
-        return [h_vec,b_vec]
-    
 
 
 # Make placeholders for total beta array (make a long one to concatenate every beta vector) 
@@ -206,7 +148,7 @@ def init_optimizer(Lr):
 
 
 # initialization   
-def init_otherVars():           
+def init_otherVariables():           
     if mode=='layer': 
         beta_val = np.zeros(np.shape(nodes)[0]-2)
         beta = np.zeros(np.shape(nodes)[0]-2)
@@ -237,7 +179,7 @@ def init_otherVars():
 
 
 
-# Make a placeholder for learning rate to be able to update learning rate (Learning rate decaying) 
+# Make a placeholder to be able to update learning rate (Learning rate decaying) 
 Lr=tf.placeholder(tf.float32)
 
 
@@ -254,7 +196,71 @@ correct_prediction=tf.equal(tf.argmax(logRegression_layer,1),tf.argmax(Y,1))
 error=1-tf.reduce_mean(tf.cast(correct_prediction,tf.float32))      
 
 
-lr, beta_val, beta, hsp_val, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err = init_otherVars()
+lr, beta_val, beta, hsp_val, plot_beta, plot_hsp, plot_lr, plot_cost, plot_train_err, plot_test_err = init_otherVariables()
+
+
+
+
+
+if mode=='layer':
+    # Weight sparsity control with Hoyer's sparsness (Layer wise)  
+    def Hoyers_sparsity_control(w_,b,max_b,tg):
+        
+        # Get value of weight
+        W=sess.run(w_)
+        [nodes,dim]=W.shape  
+        
+        # vectorize weight matrix 
+        Wvec=W.flatten()     
+        sqrt_nsamps=np.sqrt(Wvec.shape[0])
+        
+        # Calculate L1 and L2 norm     
+        L1=LA.norm(Wvec,1)
+        L2=LA.norm(Wvec,2)
+        
+        # Calculate hoyer's sparsness
+        h=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
+        
+        # Update beta
+        b-=lr_beta*np.sign(h-tg)
+        
+        # Trim value
+        b=0.0 if b<0.0 else b
+        b=max_b if b>max_b else b
+                         
+        return [h,b]
+    
+    
+elif mode=='node':   
+    # Weight sparsity control with Hoyer's sparsness (Node wise)
+    def Hoyers_sparsity_control(w_,b_vec,max_b,tg):
+    
+        # Get value of weight
+        W=sess.run(w_)
+        [nodes,dim]=W.shape
+        sqrt_nsamps=np.sqrt(nodes)
+        
+        # Calculate L1 and L2 norm 
+        L1=LA.norm(W,1,axis=0)
+        L2=LA.norm(W,2,axis=0)
+        
+        tg_vec = np.ones(dim)*tg
+     
+        # Calculate hoyer's sparsness
+        h_vec = np.zeros((1,dim))
+        h_vec=(sqrt_nsamps-(L1/L2))/(sqrt_nsamps-1)
+        
+        # Update beta       
+        b_vec-=lr_beta*np.sign(h_vec-tg_vec)
+        
+        # Trim value
+        b_vec[b_vec<0.0]=0.0
+        b_vec[b_vec>max_b]=max_b
+        
+               
+        return [h_vec,b_vec]
+    
+
 
 
 ############################################# Condition check #############################################
@@ -412,7 +418,7 @@ if condition==True:
     plot_test_err=plot_test_err[1:]
     plt.plot(plot_test_err)
     plt.ylim(0.0, 1.0)
-    plt.legend(['Training error', 'Test error'],loc='upper right')
+    plt.legend(['Training error', 'Test error'],loc='upper right',fontsize=16)
     plt.show() 
 
 
@@ -421,8 +427,8 @@ if condition==True:
     print("")       
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                  < Hidden layer",i+1,">")
-        plt.title("Beta plot",fontsize=16)
+        print("                  < Hidden layer",i+1,">",fontsize=16)
+        plt.title("Beta plot",fontsize=12)
         plot_beta[i]=plot_beta[i][1:]
         plt.plot(plot_beta[i])
         plt.ylim(0.0, np.max(max_beta)*1.2)
@@ -433,12 +439,13 @@ if condition==True:
     print("")            
     for i in np.arange(np.shape(nodes)[0]-2):
         print("")
-        print("                  < Hidden layer",i+1,">")
-        plt.title("Hoyer's sparsity plot",fontsize=16)
+        print("                  < Hidden layer",i+1,">",fontsize=16)
+        plt.title("Hoyer's sparsity plot",fontsize=12)
         plot_hsp[i]=plot_hsp[i][1:]
         plt.plot(plot_hsp[i])
         plt.ylim(0.0, 1.0)
         plt.show()
+    
     
     # make a new 'results' directory in the current directory
     current_directory = os.getcwd()
