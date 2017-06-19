@@ -406,6 +406,22 @@ if condition==True:
     final_directory = os.path.join(current_directory, r'results')
     if not os.path.exists(final_directory):
         os.makedirs(final_directory) 
+       
+    f = open(final_directory+"/parameters.txt",'w') #opens file with name of "test.txt"
+    f.write('mode : '+str(mode)+'\n')
+    f.write('optimizer_algorithm : '+str(optimizer_algorithm)+'\n')
+    f.write('n_epochs : '+str(n_epochs)+'\n')
+    f.write('batch_size : '+str(batch_size)+'\n')
+    f.write('beginAnneal : '+str(beginAnneal)+'\n')
+    f.write('decay_rate : '+str(decay_rate)+'\n')
+    f.write('lr_init : '+str(lr_init)+'\n')
+    f.write('lr_min : '+str(lr_min)+'\n')
+    f.write('beta_lrates : '+str(beta_lrates)+'\n')
+    f.write('L2_reg : '+str(L2_reg)+'\n')
+    f.write('max_beta : '+str(max_beta)+'\n')
+    f.write('tg_hspset : '+str(max_beta)+'\n')
+    f.close()
+
       
     # Plot the change of learning rate
     plt.figure() 
