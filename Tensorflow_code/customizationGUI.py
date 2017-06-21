@@ -150,11 +150,11 @@ e10.grid(row=11, column=1)
 e11.grid(row=12, column=1)
 e12.grid(row=13, column=1)
 e13.grid(row=14, column=1)
-e14.grid(row=14, column=1)
+e14.grid(row=15, column=1)
 
 
 # Ttk Button widget evaluates a command when pressed
-ttk.Button(master, text='Done', command=get_value_ft).grid(row=15, column=1, pady=10)
+ttk.Button(master, text='Done', command=get_value_ft).grid(row=16, column=1, pady=10)
 
 # Call the mainloop
 master.mainloop()
