@@ -243,8 +243,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
                        
              # Parameters for the node-wise control of weight sparsity
              # if you have three hidden layer, the number of target Hoyer's sparseness should be same 
-             tg_hspset=[0.7, 0.5, 0.5], # Target sparsity
-             max_beta=[0.05, 0.7, 0.7], # Maximum beta changes
+             tg_hspset=[0.7, 0.7, 0.5], # Target sparsity
+             max_beta=[0.05, 0.95, 0.7], # Maximum beta changes
              
              # Parameters for the layer-wise control of weight sparsity 
              # tg_hspset=[0.7, 0.5, 0.5], # Target sparsity 
