@@ -156,7 +156,10 @@ class HiddenLayer(object):
         )
         # parameters of the model
         self.params = [self.W, self.b]
-    
+        
+        self.chk_pre_output = theano.shared(numpy.zeros((60,n_out), dtype=theano.config.floatX), name='chk_pre_output', borrow=True)
+        self.updates = [(self.chk_pre_output, lin_output)]
+
 class MLP(object):
     
     def __init__(self, rng, input, n_nodes, activation=T.nnet.sigmoid):
@@ -240,18 +243,18 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
                        
              # Parameters for the node-wise control of weight sparsity
              # if you have three hidden layer, the number of target Hoyer's sparseness should be same 
-             # tg_hspset=[0.7, 0.7, 0.5], # Target sparsity
-             # max_beta=[0.05, 0.95, 0.7], # Maximum beta changes
+             tg_hspset=[0.7, 0.7, 0.5], # Target sparsity
+             max_beta=[0.05, 0.95, 0.7], # Maximum beta changes
              
              # Parameters for the layer-wise control of weight sparsity 
-             tg_hspset=[0.7, 0.7, 0.5], # Target sparsity 
-             max_beta=[0.05, 0.9, 0.8], # Maximum beta changes
+             # tg_hspset=[0.7, 0.5, 0.5], # Target sparsity 
+             # max_beta=[0.05, 0.8, 0.8], # Maximum beta changes
              beta_lrates = 1e-2,        L2_reg = 1e-4,
              
              # flag_nodewise =1 is the node-wise control of weight sparsity 
              # flag_nodewise =0 is the layer-wise control of weight sparsity
             
-             flag_nodewise = 1,
+             flag_nodewise = 0,
              # Save path  
              sav_path = '/Users/bspl/Downloads/dnnwsp-master/Theano_code', # a directory to save dnnwsp result  
               ):
