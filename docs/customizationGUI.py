@@ -96,39 +96,39 @@ e13 = ttk.Entry(master)
 e14 = ttk.Entry(master)
 
 ########### Layer
+# Insert the inital values at indices
+e2.current(0)                       # optimizer algorithm
+e3.insert(0, 0.01)                      # Momentum
+e4.insert(0,[74484,100,100,100,4]) # nodes
+e5.insert(0, 300)                  # total epoch
+e6.insert(0, 40)                  # batch size
+e7.insert(0, 50)                  # beginAnneal
+e8.insert(0, 0.0005)                 # decay rate
+e9.insert(0, 1e-3)                 # initial learning rate
+e10.insert(0, 1e-4)                 # minimum learning rate
+e11.insert(0, 1e-2)                # learning rate of beta
+e12.insert(0, 1e-4)                # L2 parameter
+e13.insert(0, [0.05, 0.95, 0.7])    # max beta
+e14.insert(0, [0.7, 0.7, 0.5])     # target hsp               
+          
+          
+          
+########## Node          
 ## Insert the inital values at indices
 #e2.current(0)                       # optimizer algorithm
 #e3.insert(0, 0.5)                      # Momentum
 #e4.insert(0,[74484,100,100,100,4]) # nodes
-#e5.insert(0, 200)                  # total epoch
-#e6.insert(0, 50)                  # batch size
-#e7.insert(0, 100)                  # beginAnneal
-#e8.insert(0, 1e-3)                 # decay rate
+#e5.insert(0, 300)                  # total epoch
+#e6.insert(0, 40)                  # batch size
+#e7.insert(0, 50)                  # beginAnneal
+#e8.insert(0, 0.0005)                 # decay rate
 #e9.insert(0, 1e-3)                 # initial learning rate
 #e10.insert(0, 1e-4)                 # minimum learning rate
-#e11.insert(0, 0.1)                # learning rate of beta
-#e12.insert(0, 1e-3)                # L2 parameter
-#e13.insert(0, [0.1, 0.6, 0.6])    # max beta
-#e14.insert(0, [0.5, 0.5, 0.5])     # target hsp               
+#e11.insert(0, 1e-2)                # learning rate of beta
+#e12.insert(0, 1e-4)                # L2 parameter
+#e13.insert(0, [0.05, 0.8, 0.8])    # max beta
+#e14.insert(0, [0.7, 0.5, 0.5])     # target hsp               
 #          
-          
-          
-########## Node          
-# Insert the inital values at indices
-e2.current(0)                       # optimizer algorithm
-e3.insert(0, 0.5)                      # Momentum
-e4.insert(0,[74484,100,100,100,4]) # nodes
-e5.insert(0, 200)                  # total epoch
-e6.insert(0, 50)                  # batch size
-e7.insert(0, 100)                  # beginAnneal
-e8.insert(0, 1e-3)                 # decay rate
-e9.insert(0, 1e-3)                 # initial learning rate
-e10.insert(0, 1e-4)                 # minimum learning rate
-e11.insert(0, 0.03)                # learning rate of beta
-e12.insert(0, 1e-3)                # L2 parameter
-e13.insert(0, [0.15, 0.4, 0.4])    # max beta
-e14.insert(0, [0.3, 0.6, 0.6])     # target hsp               
-          
           
           
           
@@ -150,6 +150,8 @@ e10.grid(row=11, column=1)
 e11.grid(row=12, column=1)
 e12.grid(row=13, column=1)
 e13.grid(row=14, column=1)
+e14.grid(row=14, column=1)
+
 
 # Ttk Button widget evaluates a command when pressed
 ttk.Button(master, text='Done', command=get_value_ft).grid(row=15, column=1, pady=10)
