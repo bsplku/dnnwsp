@@ -19,10 +19,65 @@ import scipy.io as sio
 ################################################# Parameters #################################################
 
 
-from customizationGUI \
-        import mode, optimizer_algorithm, momtentum, nodes, n_epochs, batch_size,\
-        beginAnneal, decay_rate, lr_init, lr_min, beta_lrates, L2_reg, max_beta, tg_hspset
-    
+"""
+Select optimizer
+'GradientDescent'
+'Adagrad'
+'Adam'
+'Momentum'
+'RMSProp'
+"""
+optimizer_algorithm='GradientDescent'
+
+momentum=0.01
+
+""" 
+Set the number of nodes for input, output and each hidden layer here
+"""
+nodes=[74484,100,100,100,4]
+
+"""
+Set learning parameters
+"""
+
+# Set total epoch
+n_epochs=300
+# Set mini batch size
+batch_size=40
+# Let anealing to begin after **th epoch
+beginAnneal=50
+# anealing decay rate
+decay_rate=0.0005
+# Set initial learning rate and minimum                     
+lr_init = 1e-3    
+lr_min = 1e-4
+
+# Set learning rate of beta for weight sparsity control
+beta_lrates = 1e-2
+# Set L2 parameter for L2 regularization
+L2_reg= 1e-4
+
+
+"""
+Select the sparsity control mode
+'layer' for layer wise sparsity control
+'node' for node wise sparsity control
+"""
+mode = 'node'
+
+
+"""
+Set maximum beta value of each hidden layer
+and set target sparsness value (0:dense~1:sparse)
+"""
+# layer wise
+max_beta = [0.05, 0.95, 0.7]
+tg_hspset = [0.7, 0.7, 0.5]
+
+## node_wise
+#max_beta = [0.05, 0.8, 0.8]
+#tg_hspset = [0.7, 0.5, 0.5]
+
 
 ################################################# Input data #################################################
 

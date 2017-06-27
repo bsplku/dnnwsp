@@ -247,8 +247,8 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
              max_beta=[0.05, 0.95, 0.7], # Maximum beta changes
              
              # Parameters for the layer-wise control of weight sparsity 
-             # tg_hspset=[0.7, 0.5, 0.5], # Target sparsity 
-             # max_beta=[0.05, 0.8, 0.8], # Maximum beta changes
+             # tg_hspset=[0.7, 0.7, 0.5], # Target sparsity 
+             # max_beta=[0.05, 0.95, 0.8], # Maximum beta changes
              beta_lrates = 1e-2,        L2_reg = 1e-4,
              
              # flag_nodewise =1 is the node-wise control of weight sparsity 
@@ -421,8 +421,7 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
             if flag_nodewise==1:
                 for i in range(len(n_nodes)-2):
                     node_size = n_nodes[i+1]; tg_index = np.arange((i * node_size),((i + 1) * node_size));
-                    tmp_L1_beta_vals = L1_beta_vals[tg_index]
-                    [all_hsp_vals[i][epoch-1], L1_beta_vals[tg_index]] = hsp_fnc(tmp_L1_beta_vals,classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates,flag_nodewise);
+                    [all_hsp_vals[i][epoch-1], L1_beta_vals[tg_index]] = hsp_fnc(L1_beta_vals[tg_index],classifier.hiddenLayer[i].W,max_beta[i],tg_hspset[i],beta_lrates,flag_nodewise);
                     all_L1_beta_vals[i][epoch-1]= L1_beta_vals[tg_index];
             else:
                 for i in range(len(n_nodes)-2):
@@ -456,18 +455,18 @@ def test_mlp(n_nodes=[74484,100,100,100,4],  # input-hidden-nodees
             for layer_idx in range(len(n_nodes)-2):
                 cnt_hsp_val[layer_idx] = np.mean(all_hsp_vals[layer_idx][epoch-1])
                 cnt_beta_val[layer_idx] = np.mean(all_L1_beta_vals[layer_idx][epoch-1])
-                
         else:  
             disply_text.write("Layer-wise control, epoch %i/%d, Tr.err= %.2f, Ts.err= %.2f, lr = %.6f, " % (epoch,n_epochs,train_errors[epoch-1],test_errors[epoch-1],learning_rate))
             
             all_hsp_vals[epoch-1,:] = cnt_hsp_val;
             all_L1_beta_vals[epoch-1,:] = L1_beta_vals;
+            cnt_beta_val = L1_beta_vals;
             
         for layer_idx in range(len(n_nodes)-2):
             if (layer_idx==len(n_nodes)-3):
-                disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.2f" % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,L1_beta_vals[layer_idx]))
+                disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.2f" % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,cnt_beta_val[layer_idx]))
             else:
-                disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.2f, " % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,L1_beta_vals[layer_idx]))
+                disply_text.write("hsp_l%d = %.2f/%.2f, beta_l%d = %.2f, " % (layer_idx+1,cnt_hsp_val[layer_idx],tg_hspset[layer_idx],layer_idx+1,cnt_beta_val[layer_idx]))
                     
         # Display variables                 
         print(disply_text.getvalue())
