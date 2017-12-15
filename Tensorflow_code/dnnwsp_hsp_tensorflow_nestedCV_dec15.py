@@ -74,7 +74,7 @@ batch_size=36
 # Let anealing to begin after **th epoch
 beginAnneal=30
 # anealing decay rate
-decay_rate=0.0005
+decay_rate=0.002
 # Set initial learning rate and minimum                     
 lr_init = 0.00005    
 lr_min = 0 
