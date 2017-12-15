@@ -77,7 +77,7 @@ beginAnneal=30
 decay_rate=0.0005
 # Set initial learning rate and minimum                     
 lr_init = 0.00005    
-lr_min = 0.00001 
+lr_min = 0 
 
 # Set learning rate of beta for weight sparsity control
 beta_lrates = 0.9
