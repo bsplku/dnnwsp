@@ -53,22 +53,22 @@ Select optimizer
 'Momentum'
 'RMSProp'
 """
-optimizer_algorithm='GradientDescent'
+optimizer_algorithm='Adam'
 
 momentum=0.01
 
 """ 
 Set the number of nodes for input, output and each hidden layer here
 """
-
-n_nodes=[6670, 10, 10, 10, 2]
+n_subjects=60
+n_nodes=[6670, 100, 100, 100, 2]
 
 """
 Set learning parameters
 """
 
 # Set total epoch
-n_epochs=30
+n_epochs=100
 # Set mini batch size
 batch_size=36
 # Let anealing to begin after **th epoch
@@ -76,11 +76,11 @@ beginAnneal=30
 # anealing decay rate
 decay_rate=0.0005
 # Set initial learning rate and minimum                     
-lr_init = 0.0001    
-lr_min = 0.00005 
+lr_init = 0.00005    
+lr_min = 0.00001 
 
 # Set learning rate of beta for weight sparsity control
-beta_lrates = 0.5
+beta_lrates = 0.9
 # Set L2 parameter for L2 regularization
 L2_reg= 2*1e-4
 
@@ -97,12 +97,12 @@ mode = 'layer'
 Set maximum beta value of each hidden layer
 and set target sparsness value (0:dense~1:sparse)
 """
-max_beta = [0.01, 0.2, 0.2]
+max_beta = [0.0001, 0.1, 0.15]
 
 
 
 # automatically makes sets [(0.3 or 0.5 or 0.7) , (0.5 or 0.7), (0.5 or 0.7)]
-tg_hspset_list = list(itertools.product([0.3,0.5,0.7],[0.5,0.7],[0.5,0.7]))
+tg_hspset_list = list(itertools.product([0.2,0.8],[0.2,0.8],[0.2,0.8]))
 tg_hspset_list=[list(i) for i in tg_hspset_list]
 n_tg_hspset_list = len(tg_hspset_list)
 
@@ -119,6 +119,7 @@ if not os.path.exists(dir_root):
 
 
 f = open(dir_root+"/parameters.txt",'w') #opens file with name of "test.txt"
+f.write('subject # : '+str(n_subjects)+'\n')
 f.write('mode : '+str(mode)+'\n')
 f.write('optimizer_algorithm : '+str(optimizer_algorithm)+'\n')
 f.write('n_epochs : '+str(n_epochs)+'\n')
@@ -150,8 +151,8 @@ num_1fold = int(num_total / k_folds)
 ################################################# Build Model #################################################
 
 
-with tf.device('/cpu:0'):    
-#with tf.device('/gpu:0'):
+#with tf.device('/cpu:0'):    
+with tf.device('/gpu:0'):
     
     # 'node_index' to split placeholder, for an example, given hidden_nodes=[100, 100, 100], nodes_index=[0, 100, 200, 300]
     nodes_index= [int(np.sum(n_nodes[1:i+1])) for i in np.arange(np.shape(n_nodes)[0]-1)]
@@ -392,8 +393,8 @@ if condition==True:
     init = tf.global_variables_initializer()              
 
     
-    with tf.Session() as sess:
-#    with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
+#    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
     
         # run tensorflow variable initialization
         sess.run(init)
