@@ -22,6 +22,3 @@ emt_valence_sample.mat: sample data
 ###############################################
 
 rst_vlnc_predcition.mat: results obtained from the DNN with weight sparsity control
-
-
-
