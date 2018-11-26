@@ -19,7 +19,7 @@ emt_valence_sample.mat: sample data
 # train_x  = 64 volumes x 1 [valence, arousal or dominance scores for traing]
 # test_x  = 16 volumes x 55417 voxels
 # test_y  = 16 volumes x 1 [valence, arousal or dominance scores for test]
-############################################################
+###############################################
 
 rst_vlnc_predcition.mat: results obtained from the DNN with weight sparsity control
 
