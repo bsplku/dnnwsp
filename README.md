@@ -15,4 +15,4 @@
 
 * [2] Kim, J., Calhoun, V.D., Shim, E. and Lee, J.H., 2016. Deep neural network with weight sparsity control and pre-training extracts hierarchical features and enhances classification performance: Evidence from whole-brain resting-state functional connectivity patterns of schizophrenia. NeuroImage, 124, pp.127-146.
 
-* [3] Kim, H-C., Bandettini, P.A., Lee, J.H., 2018. Deep neural network predicts emotional responses of the human brain from functional magnetic resonance imaging. NeuroImage, In press.
+* [3] Kim, H.-C., Bandettini, P.A., Lee, J.-H., 2018. Deep neural network predicts emotional responses of the human brain from functional magnetic resonance imaging. NeuroImage, In press.
