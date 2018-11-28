@@ -17,7 +17,7 @@ dnnwsp_rst_check.ipynb: a code to investigate the results obtained from the DNN 
 emt_valence_sample.mat: sample data
 ############# emt_sample_data.mat #############
 # train_x  = 64 volumes x 55417 voxels  
-# train_x  = 64 volumes x 1 [valence, arousal or dominance scores for traing]
+# train_y  = 64 volumes x 1 [valence, arousal or dominance scores for training]
 # test_x  = 16 volumes x 55417 voxels
 # test_y  = 16 volumes x 1 [valence, arousal or dominance scores for test]
 ###############################################
