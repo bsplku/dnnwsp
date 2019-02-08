@@ -4,6 +4,9 @@
 
 * In these Python-based software toolboxes using either Theano or TensorFlow library, we implemented our DNN method so that novice users to the DNN can try our model using our sample data and finally to adopt the method to their dataset. 
 
+* The "Matlab\_code" contains the code exmples for the 1D-fully-connected DNN (fcDNN) and our proposed 3D convolutional neural network (CNN) models along with sample data.
+
+
 # Sample data
 * We prepared sample [fMRI data](http://bspl.korea.ac.kr/lhrhadvs_sample_data.mat) that were acquired during the four sensorimotor tasks including left-hand clenching, right-hand clenching, auditory attention, and visual stimulus tasks [1]. Also, sample fMRI data for emotion prediction were provided [3].
 
