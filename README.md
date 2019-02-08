@@ -4,7 +4,7 @@
 
 * In these Python-based software toolboxes using either Theano or TensorFlow library, we implemented our DNN method so that novice users to the DNN can try our model using our sample data and finally to adopt the method to their dataset. 
 
-* The "Matlab\_code" contains the code exmples for the 1D-fully-connected DNN (fcDNN) and our proposed 3D convolutional neural network (CNN) models along with sample data.
+* The "Matlab_code" contains the code exmples for the 1D-fully-connected DNN (fcDNN) and our proposed 3D convolutional neural network (CNN) models along with sample data.
 
 
 # Sample data
